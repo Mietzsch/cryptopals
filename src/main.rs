@@ -1,16 +1,22 @@
 use cryptopals::util::xor;
 use hex;
+use std::{fs, str};
 
 fn main() {
-    let input1 = "1c0111001f010100061a024b53535009181c";
-    let input2 = "686974207468652062756c6c277320657965";
+    println!("preparing map");
+    let testdata =
+        fs::read_to_string("data/Shakespeare.txt").expect("Something went wrong reading the file");
+    let testdata = testdata.replace('\n', "");
+
+    let analyzer = xor::XorAnalyzer::new(&testdata.as_bytes());
+    println!("Finished reading map");
+
+    let input1 = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
 
     let bytes1 = hex::decode(input1).expect("decoding failed");
-    let bytes2 = hex::decode(input2).expect("decoding failed");
 
-    let xor = xor::xor(&bytes1, &bytes2);
+    let dec = analyzer.analyze(&bytes1);
+    let dec_str = str::from_utf8(&dec).unwrap();
 
-    let out = hex::encode(&xor);
-
-    println!("output is {}", out);
+    println!("String is \"{}\"", dec_str);
 }
