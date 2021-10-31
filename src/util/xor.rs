@@ -9,7 +9,7 @@ pub struct XorAnalyzer {
 }
 
 impl XorAnalyzer {
-    pub fn analyze(&self, bytes: &[u8]) -> Vec<u8> {
+    pub fn analyze(&self, bytes: &[u8]) -> (Vec<u8>, f64) {
         let mut thismap: HashMap<u8, f64> = HashMap::new();
 
         for byte in bytes {
@@ -31,7 +31,7 @@ impl XorAnalyzer {
                 best_key = key;
             }
         }
-        bytes.iter().map(|a| a ^ best_key).collect()
+        (bytes.iter().map(|a| a ^ best_key).collect(), best_score)
     }
 
     pub fn new(input: &[u8]) -> XorAnalyzer {
@@ -101,9 +101,51 @@ mod tests {
 
         let bytes1 = hex::decode(input1).expect("decoding failed");
 
-        let dec = analyzer.analyze(&bytes1);
+        let dec = analyzer.analyze(&bytes1).0;
         let dec_str = str::from_utf8(&dec).unwrap();
 
         assert_eq!(dec_str, "Cooking MC's like a pound of bacon");
+    }
+    #[test]
+    fn s01e04() {
+        use std::{fs, str};
+
+        println!("preparing map");
+        let testdata = fs::read_to_string("data/Shakespeare.txt")
+            .expect("Something went wrong reading the shakespeare file");
+        let testdata = testdata.replace('\n', "");
+
+        let analyzer = XorAnalyzer::new(&testdata.as_bytes());
+        println!("Finished reading map");
+
+        let input = fs::read_to_string("data/set1/4.txt")
+            .expect("Something went wrong reading the challenge file");
+
+        let reducer =
+            |previous: (usize, Vec<u8>, f64), str: (usize, &str)| -> (usize, Vec<u8>, f64) {
+                let res = analyzer.analyze(&hex::decode(str.1).expect("decoding failed"));
+                if res.1 < previous.2 {
+                    println!("New best: {} in line {}, was {}", res.1, str.0, previous.2);
+                    (str.0, res.0, res.1)
+                } else {
+                    previous
+                }
+            };
+
+        let res: (usize, Vec<u8>, f64) = input
+            .lines()
+            .enumerate()
+            .fold((0, vec![], f64::INFINITY), reducer);
+
+        println!(
+            "String is \"{}\" with a rating of {} in line {}.",
+            str::from_utf8(&res.1).unwrap(),
+            res.2,
+            res.0
+        );
+        assert_eq!(
+            str::from_utf8(&res.1).unwrap(),
+            "Now that the party is jumping\n"
+        );
     }
 }

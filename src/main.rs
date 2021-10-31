@@ -4,19 +4,35 @@ use std::{fs, str};
 
 fn main() {
     println!("preparing map");
-    let testdata =
-        fs::read_to_string("data/Shakespeare.txt").expect("Something went wrong reading the file");
+    let testdata = fs::read_to_string("data/Shakespeare.txt")
+        .expect("Something went wrong reading the shakespeare file");
     let testdata = testdata.replace('\n', "");
 
     let analyzer = xor::XorAnalyzer::new(&testdata.as_bytes());
     println!("Finished reading map");
 
-    let input1 = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
+    let input = fs::read_to_string("data/set1/4.txt")
+        .expect("Something went wrong reading the challenge file");
 
-    let bytes1 = hex::decode(input1).expect("decoding failed");
+    let reducer = |previous: (usize, Vec<u8>, f64), str: (usize, &str)| -> (usize, Vec<u8>, f64) {
+        let res = analyzer.analyze(&hex::decode(str.1).expect("decoding failed"));
+        if res.1 < previous.2 {
+            println!("New best: {} in line {}, was {}", res.1, str.0, previous.2);
+            (str.0, res.0, res.1)
+        } else {
+            previous
+        }
+    };
 
-    let dec = analyzer.analyze(&bytes1);
-    let dec_str = str::from_utf8(&dec).unwrap();
+    let res: (usize, Vec<u8>, f64) = input
+        .lines()
+        .enumerate()
+        .fold((0, vec![], f64::INFINITY), reducer);
 
-    println!("String is \"{}\"", dec_str);
+    println!(
+        "String is \"{}\" with a rating of {} in line {}.",
+        str::from_utf8(&res.1).unwrap(),
+        res.2,
+        res.0
+    );
 }
