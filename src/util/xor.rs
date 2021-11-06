@@ -1,66 +1,21 @@
-use std::collections::HashMap;
-
 pub fn xor(a: &[u8], b: &[u8]) -> Vec<u8> {
     a.iter().zip(b.iter()).map(|(a, b)| a ^ b).collect()
 }
 
-pub struct XorAnalyzer {
-    map: HashMap<u8, f64>,
-}
-
-impl XorAnalyzer {
-    pub fn analyze(&self, bytes: &[u8]) -> (Vec<u8>, f64) {
-        let mut thismap: HashMap<u8, f64> = HashMap::new();
-
-        for byte in bytes {
-            let value = thismap.entry(*byte).or_insert(0.0);
-            *value += 1.0;
-        }
-
-        for (_, val) in thismap.iter_mut() {
-            *val /= bytes.len() as f64;
-        }
-
-        let mut best_key = 0;
-        let mut best_score = f64::INFINITY;
-
-        for key in 0..=255 {
-            let score = compute_score(&thismap, key, &self.map);
-            if score < best_score {
-                best_score = score;
-                best_key = key;
-            }
-        }
-        (bytes.iter().map(|a| a ^ best_key).collect(), best_score)
-    }
-
-    pub fn new(input: &[u8]) -> XorAnalyzer {
-        let mut map: HashMap<u8, f64> = HashMap::new();
-        for byte in input {
-            let value = map.entry(*byte).or_insert(0.0);
-            *value += 1.0;
-        }
-        for (_, val) in map.iter_mut() {
-            *val /= input.len() as f64;
-        }
-        XorAnalyzer { map: map }
-    }
-}
-
-fn compute_score(thismap: &HashMap<u8, f64>, key: u8, map: &HashMap<u8, f64>) -> f64 {
-    thismap
+pub fn key_xor(plain: &[u8], key: &[u8]) -> Vec<u8> {
+    plain
         .iter()
-        .map(|(byte, value)| difference(*byte ^ key, *value, &map))
-        .sum::<f64>()
-        .sqrt()
+        .enumerate()
+        .map(|(pos, byte)| byte ^ key[pos % key.len()])
+        .collect()
 }
 
-fn difference(key: u8, value: f64, map: &HashMap<u8, f64>) -> f64 {
-    let a = map.get_key_value(&key);
-    match a {
-        Some((_, v)) => (value - v) * (value - v),
-        None => value * value,
-    }
+pub fn hamming(a: &[u8], b: &[u8]) -> u32 {
+    a.iter()
+        .zip(b.iter())
+        .map(|(a, b)| a ^ b)
+        .map(|byte| byte.count_ones())
+        .sum()
 }
 
 #[cfg(test)]
@@ -86,66 +41,26 @@ mod tests {
     }
 
     #[test]
-    fn analyzer_test() {
-        use std::{fs, str};
+    fn s01e05() {
+        let line = String::from(
+            "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal",
+        );
 
-        println!("preparing map");
-        let testdata = fs::read_to_string("data/Shakespeare.txt")
-            .expect("Something went wrong reading the file");
-        let testdata = testdata.replace('\n', "");
+        let key = String::from("ICE");
 
-        let analyzer = XorAnalyzer::new(&testdata.as_bytes());
-        println!("Finished reading map");
+        let cipher = key_xor(line.as_bytes(), key.as_bytes());
 
-        let input1 = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
+        let hex_cipher = hex::encode(cipher);
 
-        let bytes1 = hex::decode(input1).expect("decoding failed");
-
-        let dec = analyzer.analyze(&bytes1).0;
-        let dec_str = str::from_utf8(&dec).unwrap();
-
-        assert_eq!(dec_str, "Cooking MC's like a pound of bacon");
+        assert_eq!(hex_cipher, "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f");
     }
     #[test]
-    fn s01e04() {
-        use std::{fs, str};
+    fn hamming_test() {
+        let string1 = String::from("this is a test");
+        let string2 = String::from("wokka wokka!!!");
 
-        println!("preparing map");
-        let testdata = fs::read_to_string("data/Shakespeare.txt")
-            .expect("Something went wrong reading the shakespeare file");
-        let testdata = testdata.replace('\n', "");
+        let hamming = hamming(string1.as_bytes(), string2.as_bytes());
 
-        let analyzer = XorAnalyzer::new(&testdata.as_bytes());
-        println!("Finished reading map");
-
-        let input = fs::read_to_string("data/set1/4.txt")
-            .expect("Something went wrong reading the challenge file");
-
-        let reducer =
-            |previous: (usize, Vec<u8>, f64), str: (usize, &str)| -> (usize, Vec<u8>, f64) {
-                let res = analyzer.analyze(&hex::decode(str.1).expect("decoding failed"));
-                if res.1 < previous.2 {
-                    println!("New best: {} in line {}, was {}", res.1, str.0, previous.2);
-                    (str.0, res.0, res.1)
-                } else {
-                    previous
-                }
-            };
-
-        let res: (usize, Vec<u8>, f64) = input
-            .lines()
-            .enumerate()
-            .fold((0, vec![], f64::INFINITY), reducer);
-
-        println!(
-            "String is \"{}\" with a rating of {} in line {}.",
-            str::from_utf8(&res.1).unwrap(),
-            res.2,
-            res.0
-        );
-        assert_eq!(
-            str::from_utf8(&res.1).unwrap(),
-            "Now that the party is jumping\n"
-        );
+        assert_eq!(hamming, 37);
     }
 }
