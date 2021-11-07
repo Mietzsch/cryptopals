@@ -45,22 +45,32 @@ impl XorAnalyzer {
         }
         XorAnalyzer { map: map }
     }
+
+    pub fn score_text(&self, bytes: &[u8]) -> f64 {
+        let mut thismap: HashMap<u8, f64> = HashMap::new();
+
+        for byte in bytes {
+            let value = thismap.entry(*byte).or_insert(0.0);
+            *value += 1.0;
+        }
+
+        for (_, val) in thismap.iter_mut() {
+            *val /= bytes.len() as f64;
+        }
+        compute_score(&thismap, 0, &self.map)
+    }
 }
 
 fn compute_score(thismap: &HashMap<u8, f64>, key: u8, map: &HashMap<u8, f64>) -> f64 {
-    thismap
-        .iter()
-        .map(|(byte, value)| difference(*byte ^ key, *value, &map))
-        .sum::<f64>()
-        .sqrt()
-}
-
-fn difference(key: u8, value: f64, map: &HashMap<u8, f64>) -> f64 {
-    let a = map.get_key_value(&key);
-    match a {
-        Some((_, v)) => (value - v) * (value - v),
-        None => value * value,
+    let mut res = 0.0;
+    for i in 0..=255 {
+        let a = thismap
+            .get_key_value(&(i ^ key))
+            .unwrap_or_else(|| (&i, &0.0));
+        let b = map.get_key_value(&i).unwrap_or_else(|| (&i, &0.0));
+        res += (a.1 - b.1) * (a.1 - b.1);
     }
+    res.sqrt()
 }
 
 #[cfg(test)]
