@@ -7,3 +7,5 @@ edition = "2018"
 
 [dependencies]
 hex = "0.4.3"
+rand = "0.8"
+aes = "0.7.5"
