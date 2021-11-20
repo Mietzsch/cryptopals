@@ -1,18 +1,23 @@
-use cryptopals::{s01::aes_ecb::aes128_ecb_decode, util::base_64::Base64};
+use cryptopals::s01::aes_ecb::aes_ecb_detector;
 
 fn main() {
-    use std::{fs, str};
+    use std::fs;
 
-    let input = fs::read_to_string("data/set1/7.txt")
+    let input = fs::read_to_string("data/set1/8.txt")
         .expect("Something went wrong reading the challenge file");
 
-    let input = input.replace("\n", "");
+    let reducer = |previous: (usize, usize), str: (usize, &str)| -> (usize, usize) {
+        let bytes = hex::decode(str.1).expect("decoding failed");
+        let res = aes_ecb_detector(&bytes);
+        if previous.0 < res {
+            println!("New best: {} in line {}, was {}", res, str.0, previous.0);
+            (res, str.0)
+        } else {
+            previous
+        }
+    };
 
-    let input_bytes = Base64::new_from_string(&input).unwrap();
+    let res: (usize, usize) = input.lines().enumerate().fold((0, 0), reducer);
 
-    let key = String::from("YELLOW SUBMARINE");
-
-    let decode = aes128_ecb_decode(input_bytes.to_bytes(), key.as_bytes());
-
-    println!("decoded text:\n{}", str::from_utf8(&decode).unwrap());
+    println!("Most likely line is {} with a value of {}", res.1, res.0);
 }
