@@ -4,19 +4,16 @@ use aes::{
     cipher::generic_array::GenericArray, Aes128, Block, BlockDecrypt, BlockEncrypt, NewBlockCipher,
 };
 
+use crate::s02::padding::pkcs7_padding;
+
 pub fn aes128_ecb_encode(plain: &[u8], key: &[u8]) -> Vec<u8> {
     let key_array = GenericArray::from_slice(key);
     let aes = Aes128::new(key_array);
 
     let mut res = Vec::<u8>::new();
 
-    let blocks = plain.len() / 16;
-    if blocks * 16 != plain.len() {
-        panic!("input must be a multiple of 16!");
-    }
-
     for chunk in plain.chunks(16) {
-        let mut block = Block::clone_from_slice(chunk);
+        let mut block = Block::clone_from_slice(&pkcs7_padding(chunk, 16));
         aes.encrypt_block(&mut block);
         res.append(&mut block.to_vec());
     }

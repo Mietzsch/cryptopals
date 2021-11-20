@@ -4,6 +4,8 @@ use aes::{
 
 use crate::util::xor;
 
+use super::padding::pkcs7_padding;
+
 pub fn aes128_cbc_encode(plain: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     let key_array = GenericArray::from_slice(key);
     let aes = Aes128::new(key_array);
@@ -16,8 +18,12 @@ pub fn aes128_cbc_encode(plain: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
         panic!("input must be multiple of 16!");
     }
 
+    if iv.len() % 16 != 0 {
+        panic!("input must be multiple of 16!");
+    }
+
     for chunk in plain.chunks(16) {
-        let mut block = Block::clone_from_slice(&xor::xor(chunk, &xor_text));
+        let mut block = Block::clone_from_slice(&xor::xor(&pkcs7_padding(chunk, 16), &xor_text));
         aes.encrypt_block(&mut block);
         xor_text = Vec::<u8>::from(block.to_vec());
         res.append(&mut block.to_vec());
