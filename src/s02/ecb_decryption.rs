@@ -45,7 +45,7 @@ pub fn decrypt_ecb_simple(input: &[u8]) -> Vec<u8> {
     let pb = ProgressBar::new(blocks as u64);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} ({eta})")
+            .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos:>7}/{len:7} ETA: {eta}")
             .progress_chars("#>-"),
     );
 
