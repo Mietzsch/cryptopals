@@ -1,6 +1,9 @@
 use rand::Rng;
 
-use crate::s01::aes_ecb::{aes128_ecb_encode, aes_ecb_detector};
+use crate::{
+    s01::aes_ecb::{aes128_ecb_encode, aes_ecb_detector},
+    util::generators::generate_aes_key,
+};
 
 use super::aes_cbc::aes128_cbc_encode;
 
@@ -31,15 +34,6 @@ pub fn encryption_oracle(input: &[u8]) -> (Vec<u8>, bool) {
             choice,
         )
     }
-}
-
-pub fn generate_aes_key() -> Vec<u8> {
-    let mut v: Vec<u8> = vec![0; 16];
-
-    for x in v.iter_mut() {
-        *x = rand::random()
-    }
-    v
 }
 
 pub fn detect_ecb_cbc() -> (bool, bool) {
