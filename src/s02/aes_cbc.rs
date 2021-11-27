@@ -14,10 +14,6 @@ pub fn aes128_cbc_encode(plain: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
 
     let mut xor_text = Vec::<u8>::from(iv);
 
-    if plain.len() % 16 != 0 {
-        panic!("input must be multiple of 16!");
-    }
-
     if iv.len() % 16 != 0 {
         panic!("input must be multiple of 16!");
     }
