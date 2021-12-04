@@ -1,34 +1,29 @@
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use std::collections::{HashMap, HashSet};
 
-use crate::{
-    s01::aes_ecb::{aes128_ecb_encode, aes_ecb_detector},
-    util::generators::generate_aes_key,
-};
+use crate::s01::aes_ecb::{aes128_ecb_encode, aes_ecb_detector};
 
-pub struct ECBOracle {
+use super::oracle::EncryptionOracle;
+
+pub struct ECBOracleSimple {
     secret: Vec<u8>,
     key: Vec<u8>,
 }
 
-impl ECBOracle {
-    pub fn encrypt(&self, input: &[u8]) -> Vec<u8> {
+impl EncryptionOracle for ECBOracleSimple {
+    fn encrypt(&self, input: &[u8]) -> Vec<u8> {
         let mut new_plain = input.to_vec();
         new_plain.append(&mut self.secret.clone());
         aes128_ecb_encode(&new_plain, &self.key)
     }
 }
 
-pub fn decrypt_ecb_simple(input: &[u8]) -> Vec<u8> {
+pub fn decrypt_ecb_simple(oracle: &impl EncryptionOracle) -> Vec<u8> {
     println!("Starting simple ECB decryption");
 
     let mut result = Vec::new();
-    let oracle = ECBOracle {
-        secret: input.to_vec(),
-        key: generate_aes_key(),
-    };
 
-    let (blocksize, blocks) = get_blocksize(&oracle);
+    let (blocksize, blocks) = get_blocksize(oracle);
     println!(" blocksize: {}, blocks: {}...", blocksize, blocks);
 
     let count = aes_ecb_detector(&oracle.encrypt(&vec![0; 10 * blocksize]));
@@ -50,7 +45,7 @@ pub fn decrypt_ecb_simple(input: &[u8]) -> Vec<u8> {
     );
 
     for i in (0..blocks).progress_with(pb) {
-        let decrypted_block = decrypt_block(&oracle, blocksize, i, &previous_block);
+        let decrypted_block = decrypt_block(oracle, blocksize, i, &previous_block);
         previous_block = decrypted_block;
         result.append(&mut previous_block.clone());
     }
@@ -58,7 +53,7 @@ pub fn decrypt_ecb_simple(input: &[u8]) -> Vec<u8> {
     result
 }
 
-fn get_blocksize(oracle: &ECBOracle) -> (usize, usize) {
+fn get_blocksize(oracle: &impl EncryptionOracle) -> (usize, usize) {
     let mut lengthset = HashSet::new();
 
     for i in 0..64 {
@@ -82,7 +77,7 @@ fn get_blocksize(oracle: &ECBOracle) -> (usize, usize) {
 }
 
 fn decrypt_block(
-    oracle: &ECBOracle,
+    oracle: &impl EncryptionOracle,
     blocksize: usize,
     block: usize,
     previous_block: &[u8],
@@ -122,7 +117,7 @@ mod tests {
 
     use std::{fs, str::from_utf8};
 
-    use crate::util::base_64::Base64;
+    use crate::util::{base_64::Base64, generators::generate_aes_key};
 
     use super::*;
 
@@ -132,7 +127,12 @@ mod tests {
             .expect("Something went wrong reading the challenge file");
         let input = input.replace("\n", "");
 
-        let dec = decrypt_ecb_simple(Base64::new_from_string(&input).unwrap().to_bytes());
+        let oracle = ECBOracleSimple {
+            secret: Base64::new_from_string(&input).unwrap().to_bytes().to_vec(),
+            key: generate_aes_key(),
+        };
+
+        let dec = decrypt_ecb_simple(&oracle);
 
         let dec_str = from_utf8(&dec).unwrap();
 
