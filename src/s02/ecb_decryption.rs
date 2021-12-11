@@ -1,7 +1,10 @@
-use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
+use indicatif::ProgressIterator;
 use std::collections::{HashMap, HashSet};
 
-use crate::s01::aes_ecb::{aes128_ecb_encode, aes_ecb_detector};
+use crate::{
+    s01::aes_ecb::{aes128_ecb_encode, aes_ecb_detector},
+    util::progress_bar::create_progress_bar,
+};
 
 use super::oracle::EncryptionOracle;
 
@@ -78,14 +81,7 @@ pub fn decrypt_ecb(oracle: &impl EncryptionOracle) -> Vec<u8> {
 
     println!(" decrypting blocks...");
 
-    let pb = ProgressBar::new(blocks as u64);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos:>7}/{len:7} ETA: {eta}")
-            .progress_chars("#>-"),
-    );
-
-    for i in (0..blocks).progress_with(pb) {
+    for i in (0..blocks).progress_with(create_progress_bar(blocks as u64)) {
         let decrypted_block =
             decrypt_block(oracle, blocksize, i, &previous_block, random_prefix_length);
         previous_block = decrypted_block;

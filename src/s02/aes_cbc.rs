@@ -25,6 +25,12 @@ pub fn aes128_cbc_encode(plain: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
         res.append(&mut block.to_vec());
     }
 
+    if plain.len() % 16 == 0 {
+        let mut block = Block::clone_from_slice(&xor::xor(&[16; 16], &xor_text));
+        aes.encrypt_block(&mut block);
+        res.append(&mut block.to_vec());
+    }
+
     res
 }
 

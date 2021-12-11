@@ -37,6 +37,12 @@ impl fmt::Display for PKCS7Error {
 
 pub fn remove_pkcs7_padding(text: &[u8]) -> Result<Vec<u8>> {
     let padding_byte = *text.last().unwrap();
+    if padding_byte == 0 {
+        return Err(PKCS7Error);
+    }
+    if padding_byte as usize > text.len() {
+        return Err(PKCS7Error);
+    }
     let padding_start = text.len() - padding_byte as usize;
     let res = text[0..padding_start].to_vec();
     if text[padding_start..] != vec![padding_byte; padding_byte as usize] {
