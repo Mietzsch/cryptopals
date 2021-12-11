@@ -79,10 +79,12 @@ fn cbc_padding_attack_blocks(
                     if oracle.has_valid_padding(&iv, current) {
                         let plain_byte = i ^ (16 - byte_number as u8);
                         zeroizing_iv[byte_number] = plain_byte;
+                        continue;
                     }
                 } else {
                     let plain_byte = i ^ (16 - byte_number as u8);
                     zeroizing_iv[byte_number] = plain_byte;
+                    continue;
                 }
             }
         }
