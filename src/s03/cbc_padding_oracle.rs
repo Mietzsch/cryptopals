@@ -1,10 +1,11 @@
 use indicatif::ProgressIterator;
 
-use crate::util::{generators::generate_aes_key, progress_bar::create_progress_bar, xor::xor};
-
-use super::{
-    aes_cbc::{aes128_cbc_decode, aes128_cbc_encode},
-    padding::remove_pkcs7_padding,
+use crate::{
+    s02::{
+        aes_cbc::{aes128_cbc_decode, aes128_cbc_encode},
+        padding::remove_pkcs7_padding,
+    },
+    util::{generators::generate_aes_key, progress_bar::create_progress_bar, xor::xor},
 };
 
 pub struct CBCPaddingOracle {

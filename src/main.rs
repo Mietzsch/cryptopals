@@ -1,10 +1,8 @@
 use std::str::from_utf8;
 
 use cryptopals::{
-    s02::{
-        cbc_padding_oracle::{cbc_padding_attack, CBCPaddingOracle},
-        padding::remove_pkcs7_padding,
-    },
+    s02::padding::remove_pkcs7_padding,
+    s03::cbc_padding_oracle::{cbc_padding_attack, CBCPaddingOracle},
     util::{base_64::Base64, generators::generate_aes_key},
 };
 

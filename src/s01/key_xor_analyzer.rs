@@ -80,7 +80,7 @@ mod tests {
         println!("preparing map");
         let testdata = fs::read_to_string("data/Shakespeare.txt")
             .expect("Something went wrong reading the shakespeare file");
-        //let testdata = testdata.replace('\n', "");
+        let testdata = testdata.replace('\n', "");
 
         let analyzer = KeyXorAnalyzer::new(&testdata.as_bytes());
         println!("Finished reading map");
