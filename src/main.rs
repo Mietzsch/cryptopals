@@ -1,17 +1,15 @@
 use std::str::from_utf8;
 
-use cryptopals::{
-    s02::padding::remove_pkcs7_padding,
-    s03::cbc_padding_oracle::{cbc_padding_attack, CBCPaddingOracle},
-    util::{base_64::Base64, generators::generate_aes_key},
-};
+use cryptopals::{s03::aes_ctr::aes128_ctr_decode, util::base_64::Base64};
 
 fn main() {
-    let secret =
-        Base64::new_from_string("MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=").unwrap();
-    let oracle = CBCPaddingOracle::new(&generate_aes_key(), secret.to_bytes());
+    let secret = Base64::new_from_string(
+        "L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==",
+    )
+    .unwrap();
 
-    let res = cbc_padding_attack(oracle);
-    let plain = remove_pkcs7_padding(&res).unwrap();
+    let iv = vec![0; 8];
+
+    let plain = aes128_ctr_decode(&secret.to_bytes(), "YELLOW SUBMARINE".as_bytes(), &iv);
     println!("result: {}", from_utf8(&plain).unwrap());
 }
