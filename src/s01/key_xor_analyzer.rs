@@ -42,28 +42,61 @@ impl KeyXorAnalyzer {
         for (keylen, score) in &distances[0..keys_to_try] {
             println!("possible size {} with score {}", keylen, score);
 
-            let mut keys = Vec::<u8>::new();
-
-            for i in 0..*keylen {
-                let ciphertext_vector: Vec<u8> =
-                    cipher[i..].iter().cloned().step_by(*keylen).collect();
-                let res = self.xor_analyzer.analyze(&ciphertext_vector);
-                //println!("  Found key {} with score {}", res.2, res.1);
-                keys.push(res.2);
-            }
-
-            let plain = key_xor(cipher, &keys);
-
-            let key_str = str::from_utf8(&keys).unwrap_or_else(|_| "NOT UTF8");
-
-            let score = self.xor_analyzer.score_text(&plain);
-            println!("    Final score: {} with key {}", score, key_str);
-            if score < res.1 {
-                res = (plain, score, keys);
+            let fixed_keylen_score = self.analyze_with_fixed_keylen(cipher, *keylen, false);
+            if fixed_keylen_score.1 < res.1 {
+                res = fixed_keylen_score;
             }
         }
 
         res
+    }
+
+    pub fn analyze_with_fixed_keylen(
+        &self,
+        cipher: &[u8],
+        keylen: usize,
+        optimize_first_letter: bool,
+    ) -> (Vec<u8>, f64, Vec<u8>) {
+        let mut keys = Vec::<u8>::new();
+
+        for i in 0..keylen {
+            let ciphertext_vector: Vec<u8> = cipher[i..].iter().cloned().step_by(keylen).collect();
+            let res = self.xor_analyzer.analyze(&ciphertext_vector);
+            //println!("  Found key {} with score {}", res.2, res.1);
+            keys.push(res.2);
+        }
+
+        if optimize_first_letter {
+            let plain = key_xor(cipher, &keys);
+
+            let score = self.xor_analyzer.score_text(&plain);
+            let mut best_score = (score, 0);
+
+            for i in 0..=255 {
+                let mut new_key = keys.clone();
+                new_key[0] ^= i;
+
+                let new_score = self.xor_analyzer.score_text(&key_xor(cipher, &new_key));
+                if new_score < best_score.0 {
+                    // println!(
+                    //     "Found better score with {}, score {}. Was {}",
+                    //     i, new_score, best_score.0,
+                    // );
+                    best_score = (new_score, i);
+                }
+            }
+
+            keys[0] ^= best_score.1;
+        }
+
+        let plain = key_xor(cipher, &keys);
+
+        let key_str = str::from_utf8(&keys).unwrap_or_else(|_| "NOT UTF8");
+
+        let score = self.xor_analyzer.score_text(&plain);
+
+        println!("    Final score: {} with key {}", score, key_str);
+        (plain, score, keys)
     }
 }
 

@@ -43,6 +43,7 @@ fn increment_iv(iv: &mut Vec<u8>, original_len: usize) {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use std::str::from_utf8;
 
