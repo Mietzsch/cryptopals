@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, panic};
+use std::cmp::Ordering;
 
 const MT_W: usize = 32;
 const MT_N: usize = 624;
@@ -72,9 +72,20 @@ fn as_w_bits(number: u64) -> u64 {
     }
 }
 
+pub fn guess_rng_seed(output: u32, max_time: u32, out_time: u32) -> Option<u32> {
+    let first_seed = out_time - max_time;
+    for potential_seed in first_seed..out_time {
+        let mut rng = MTRng::new(potential_seed);
+        if rng.extract_number() == output {
+            return Some(potential_seed);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{fs, time::SystemTime};
 
     use super::*;
 
@@ -90,5 +101,19 @@ mod tests {
             let kat_number = line.parse::<u32>().unwrap();
             assert_eq!(kat_number, mt_rng.extract_number());
         }
+    }
+
+    #[test]
+    fn s03e06() {
+        let unix_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as u32;
+        let seed_time = unix_time + (rand::random::<u32>() % 600);
+        let mut rng = MTRng::new(seed_time);
+        let out_time = seed_time + (rand::random::<u32>() % 600);
+        let random = rng.extract_number();
+        let guess = guess_rng_seed(random, 1300, out_time).expect("No seed found");
+        assert_eq!(guess, seed_time);
     }
 }

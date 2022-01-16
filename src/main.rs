@@ -1,20 +1,18 @@
-use std::fs;
+use std::time::SystemTime;
 
-use cryptopals::s03::mt_rng::MTRng;
+use cryptopals::s03::mt_rng::{guess_rng_seed, MTRng};
 
 fn main() {
-    let seed = 1131464071;
-    let mut mt_rng = MTRng::new(seed);
-
-    let input =
-        fs::read_to_string("data/set3/5.txt").expect("Something went wrong reading the KAT file");
-
-    for line in input.lines() {
-        let kat_number = line.parse::<u32>().unwrap();
-        if kat_number != mt_rng.extract_number() {
-            panic!("numbers dont match");
-        } else {
-            println!("line matched");
-        }
+    let unix_time = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as u32;
+    let seed_time = unix_time + (rand::random::<u32>() % 600);
+    let mut rng = MTRng::new(seed_time);
+    let out_time = seed_time + (rand::random::<u32>() % 600);
+    let random = rng.extract_number();
+    let guess = guess_rng_seed(random, 1300, out_time).expect("No seed found");
+    if seed_time == guess {
+        println!("Found seed: {}", seed_time);
     }
 }
