@@ -1,4 +1,6 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, convert::TryInto};
+
+use crate::util::bits::{get_bit, to_u64};
 
 const MT_W: usize = 32;
 const MT_N: usize = 624;
@@ -42,11 +44,7 @@ impl MTRng {
             Ordering::Equal => self.twist(),
         }
 
-        let mut y = self.mt[self.index];
-        y = y ^ ((y >> MT_U) & MT_D);
-        y = y ^ ((y << MT_S) & MT_B);
-        y = y ^ ((y << MT_T) & MT_C);
-        y = y ^ (y >> MT_L);
+        let y = temper(self.mt[self.index]);
 
         self.index = self.index + 1;
         as_w_bits(y) as u32
@@ -70,6 +68,81 @@ fn as_w_bits(number: u64) -> u64 {
     } else {
         number
     }
+}
+
+fn temper(x: u64) -> u64 {
+    let mut y = x ^ ((x >> MT_U) & MT_D);
+    y = y ^ ((y << MT_S) & MT_B);
+    y = y ^ ((y << MT_T) & MT_C);
+    y = y ^ (y >> MT_L);
+    y
+}
+
+fn untemper_right(x: u64, rightshift: usize, and_number: u64) -> u64 {
+    let mut res = 0;
+    let rightshift: u32 = rightshift.try_into().unwrap();
+
+    for i in (0..64).rev() {
+        let i_as_usize = i.try_into().unwrap();
+        if i >= 64 - rightshift {
+            res = res + to_u64(get_bit(x, i_as_usize), i_as_usize)
+        } else {
+            res = res
+                + to_u64(
+                    get_bit(x, i_as_usize)
+                        ^ (get_bit(res, (i + rightshift).try_into().unwrap())
+                            & get_bit(and_number, i_as_usize)),
+                    i_as_usize,
+                )
+        }
+    }
+    res
+}
+
+fn untemper_left(x: u64, leftshift: usize, and_number: u64) -> u64 {
+    let mut res = 0;
+    let leftshift: u32 = leftshift.try_into().unwrap();
+
+    for i in 0..64 {
+        let i_as_usize = i.try_into().unwrap();
+        if i < leftshift {
+            res = res + to_u64(get_bit(x, i_as_usize), i_as_usize)
+        } else {
+            res = res
+                + to_u64(
+                    get_bit(x, i_as_usize)
+                        ^ (get_bit(res, (i - leftshift).try_into().unwrap())
+                            & get_bit(and_number, i_as_usize)),
+                    i_as_usize,
+                )
+        }
+    }
+    res
+}
+
+fn untemper(y: u64) -> u64 {
+    let mut x = untemper_right(y, MT_L, u64::MAX);
+    x = untemper_left(x, MT_T, MT_C);
+    x = untemper_left(x, MT_S, MT_B);
+    x = untemper_right(x, MT_U, MT_D);
+    x
+}
+
+pub fn clone_mt_rng(original: &mut MTRng) -> Option<MTRng> {
+    for _ in 0..MT_N {
+        let mut mt = [0; MT_N];
+        for i in 0..MT_N {
+            mt[i] = untemper(original.extract_number().into());
+        }
+        let mut potential_clone = MTRng {
+            mt: mt,
+            index: MT_N,
+        };
+        if original.extract_number() == potential_clone.extract_number() {
+            return Some(potential_clone);
+        }
+    }
+    None
 }
 
 pub fn guess_rng_seed(output: u32, max_time: u32, out_time: u32) -> Option<u32> {
@@ -115,5 +188,27 @@ mod tests {
         let random = rng.extract_number();
         let guess = guess_rng_seed(random, 1300, out_time).expect("No seed found");
         assert_eq!(guess, seed_time);
+    }
+
+    #[test]
+    fn reverse_temper() {
+        let input = 23834434;
+        let tempered_easy = temper(input);
+        assert_eq!(untemper(tempered_easy), input);
+    }
+
+    #[test]
+    fn s03e07() {
+        let mut rng = MTRng::new(2389);
+        let offset = rng.extract_number() % 624;
+        for _ in 0..offset {
+            let _ = rng.extract_number();
+        }
+
+        let mut copy = clone_mt_rng(&mut rng).unwrap();
+
+        for _ in 0..MT_N {
+            assert_eq!(rng.extract_number(), copy.extract_number());
+        }
     }
 }
