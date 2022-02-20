@@ -7,12 +7,41 @@ const H3: u32 = 0x10325476;
 const H4: u32 = 0xC3D2E1F0;
 
 pub fn sha1(message: &[u8]) -> [u8; 20] {
-    let expanded_message = expand_message(message);
+    let mut expanded_message = message.to_vec();
+    expanded_message.append(&mut get_padding(message.len(), message.len()));
     sha1_expanded_with_hs(&expanded_message, H0, H1, H2, H3, H4)
 }
 
 pub fn sha1_unsafe_keyed_mac(key: &[u8], message: &[u8]) -> [u8; 20] {
     sha1(&[key, message].concat())
+}
+
+pub fn extend_sha1(
+    original_hash: &[u8; 20],
+    new_message: &[u8],
+    keylen_bytes: usize,
+    original_message_bytes: usize,
+) -> (Vec<u8>, [u8; 20]) {
+    let glue_padding = get_padding(
+        keylen_bytes + original_message_bytes,
+        keylen_bytes + original_message_bytes,
+    );
+    let mut new_expanded_message = new_message.to_vec();
+    new_expanded_message.append(&mut get_padding(
+        new_message.len(),
+        keylen_bytes + original_message_bytes + glue_padding.len() + new_message.len(),
+    ));
+    (
+        glue_padding,
+        sha1_expanded_with_hs(
+            &new_expanded_message,
+            u8_vector_to_u32(&original_hash[0..4]),
+            u8_vector_to_u32(&original_hash[4..8]),
+            u8_vector_to_u32(&original_hash[8..12]),
+            u8_vector_to_u32(&original_hash[12..16]),
+            u8_vector_to_u32(&original_hash[16..20]),
+        ),
+    )
 }
 
 fn sha1_expanded_with_hs(
@@ -117,18 +146,17 @@ fn sha1_chunk_loop(
     *h4 = (*h4).wrapping_add(e);
 }
 
-fn expand_message(message: &[u8]) -> Vec<u8> {
-    let mut expanded_message = message.to_vec();
-    let message_length = (expanded_message.len() * 8) as u64;
-    expanded_message.push(0x80);
+fn get_padding(true_message_length: usize, padding_message_length: usize) -> Vec<u8> {
+    let mut padding = Vec::<u8>::new();
+    padding.push(0x80);
 
-    while expanded_message.len() % 64 != 56 {
-        expanded_message.push(0x00);
+    while (padding.len() + true_message_length) % 64 != 56 {
+        padding.push(0x00);
     }
 
-    expanded_message.append(&mut u64_to_big_endian(message_length).into());
+    padding.append(&mut u64_to_big_endian((padding_message_length * 8) as u64).into());
 
-    expanded_message
+    padding
 }
 
 fn u64_to_big_endian(x: u64) -> [u8; 8] {
@@ -215,5 +243,36 @@ mod tests {
         let tampered_mac = sha1_unsafe_keyed_mac(&key, tampered_message.as_bytes());
 
         assert_ne!(mac, tampered_mac);
+    }
+
+    #[test]
+    fn sha1_simple_length_extension() {
+        let key = generate_aes_key();
+        let message = "comment1=cooking MCs;userdata=foo;comment2= like a pound of bacon";
+
+        let mac = sha1_unsafe_keyed_mac(&key, message.as_bytes());
+
+        let new_message_end = ";admin=true";
+
+        let (glue_padding, forged_hash) =
+            extend_sha1(&mac, new_message_end.as_bytes(), 16, message.len());
+        let forged_message = [
+            message.as_bytes(),
+            &glue_padding,
+            new_message_end.as_bytes(),
+        ]
+        .concat();
+
+        assert_eq!(sha1_unsafe_keyed_mac(&key, &forged_message), forged_hash);
+
+        let mut is_admin = false;
+
+        for substring in forged_message.split(|byte| *byte == b';') {
+            if substring == b"admin=true" {
+                is_admin = true;
+            }
+        }
+
+        assert!(is_admin);
     }
 }
