@@ -1,5 +1,7 @@
 use std::convert::TryInto;
 
+use crate::util::bits::{u32_to_big_endian, u64_to_big_endian, u8_vector_to_u32};
+
 const H0: u32 = 0x67452301;
 const H1: u32 = 0xEFCDAB89;
 const H2: u32 = 0x98BADCFE;
@@ -157,36 +159,6 @@ fn get_padding(true_message_length: usize, padding_message_length: usize) -> Vec
     padding.append(&mut u64_to_big_endian((padding_message_length * 8) as u64).into());
 
     padding
-}
-
-fn u64_to_big_endian(x: u64) -> [u8; 8] {
-    let mut res = [0; 8];
-    for i in 0..8 {
-        let byte = (x >> (i * 8) & 0xff) as u8;
-        res[7 - i] = byte;
-    }
-    res
-}
-
-fn u32_to_big_endian(x: u32) -> [u8; 4] {
-    let mut res = [0; 4];
-    for i in 0..4 {
-        let byte = (x >> (i * 8) & 0xff) as u8;
-        res[3 - i] = byte;
-    }
-    res
-}
-
-fn u8_vector_to_u32(vec: &[u8]) -> u32 {
-    if vec.len() != 4 {
-        panic!("Length should be 4")
-    }
-    let mut res = 0;
-    for i in 0..4 {
-        res <<= 8;
-        res += vec[i] as u32;
-    }
-    res
 }
 
 #[cfg(test)]
