@@ -11,6 +11,10 @@ pub fn sha1(message: &[u8]) -> [u8; 20] {
     sha1_expanded_with_hs(&expanded_message, H0, H1, H2, H3, H4)
 }
 
+pub fn sha1_unsafe_keyed_mac(key: &[u8], message: &[u8]) -> [u8; 20] {
+    sha1(&[key, message].concat())
+}
+
 fn sha1_expanded_with_hs(
     message: &[u8],
     h0_in: u32,
@@ -160,6 +164,8 @@ fn u8_vector_to_u32(vec: &[u8]) -> u32 {
 #[cfg(test)]
 mod tests {
 
+    use crate::util::generators::generate_aes_key;
+
     use super::*;
 
     #[test]
@@ -195,5 +201,19 @@ mod tests {
             hex::encode(&sha_value3),
             "68ac906495480a3404beee4874ed853a037a7a8f"
         );
+    }
+
+    #[test]
+    fn sha1_keyed_mac_test() {
+        let key = generate_aes_key();
+        let message = "asdlksld";
+
+        let mac = sha1_unsafe_keyed_mac(&key, message.as_bytes());
+
+        let tampered_message = "bsdlksld";
+
+        let tampered_mac = sha1_unsafe_keyed_mac(&key, tampered_message.as_bytes());
+
+        assert_ne!(mac, tampered_mac);
     }
 }
