@@ -6,3 +6,4 @@ pub mod md4;
 pub mod md4_length_extension;
 pub mod sha1;
 pub mod sha1_length_extension;
+pub mod timing_oracle;
