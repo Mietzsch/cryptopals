@@ -10,3 +10,4 @@ hex = "0.4.3"
 rand = "0.8"
 aes = "0.7.5"
 indicatif = "0.16.2"
+num-bigint = { version = "0.4", features = ["rand"] }
