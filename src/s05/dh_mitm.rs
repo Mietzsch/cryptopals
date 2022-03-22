@@ -56,8 +56,7 @@ impl Participant {
     }
 }
 
-pub fn get_zero_session_key() -> [u8; 16] {
-    let shared_secret = BigUint::from(0u8);
+pub fn get_session_key_for(shared_secret: BigUint) -> [u8; 16] {
     let hash = sha1(&shared_secret.to_bytes_be());
     hash[0..16].try_into().unwrap()
 }
@@ -104,7 +103,89 @@ mod tests {
 
         assert_eq!(message, std::str::from_utf8(&decrypted).unwrap());
 
-        let session_key = get_zero_session_key();
+        let session_key = get_session_key_for(BigUint::from(0u8));
+
+        let out = aes128_cbc_decode(&cipher, &session_key, &iv);
+        let decrypted_mal = remove_pkcs7_padding(&out).expect("invalid padding");
+
+        assert_eq!(message, std::str::from_utf8(&decrypted_mal).unwrap())
+    }
+
+    #[test]
+    fn s05e03_g_is_one() {
+        let message = "Hello World!";
+        let mut alice = Participant::new();
+        let mut bob = Participant::new();
+
+        let (p_a, g_a, a_a) = alice.send_first_message(&get_nist_p(), &BigUint::from(1u8));
+        let (_p_b, _g_b, a_b) = bob.send_first_message(&p_a, &g_a);
+
+        alice.receive_first_message(&a_b);
+        bob.receive_first_message(&a_a);
+
+        let (iv, cipher) = alice.encrypt_message(message.as_bytes());
+        let decrypted = bob.decrypt_message(&iv, &cipher);
+
+        assert_eq!(message, std::str::from_utf8(&decrypted).unwrap());
+
+        let session_key = get_session_key_for(BigUint::from(1u8));
+
+        let out = aes128_cbc_decode(&cipher, &session_key, &iv);
+        let decrypted_mal = remove_pkcs7_padding(&out).expect("invalid padding");
+
+        assert_eq!(message, std::str::from_utf8(&decrypted_mal).unwrap())
+    }
+
+    #[test]
+    fn s05e03_g_is_p() {
+        let message = "Hello World!";
+        let mut alice = Participant::new();
+        let mut bob = Participant::new();
+
+        let (p_a, g_a, a_a) = alice.send_first_message(&get_nist_p(), &get_nist_p());
+        let (_p_b, _g_b, a_b) = bob.send_first_message(&p_a, &g_a);
+
+        alice.receive_first_message(&a_b);
+        bob.receive_first_message(&a_a);
+
+        let (iv, cipher) = alice.encrypt_message(message.as_bytes());
+        let decrypted = bob.decrypt_message(&iv, &cipher);
+
+        assert_eq!(message, std::str::from_utf8(&decrypted).unwrap());
+
+        let session_key = get_session_key_for(BigUint::from(0u8));
+
+        let out = aes128_cbc_decode(&cipher, &session_key, &iv);
+        let decrypted_mal = remove_pkcs7_padding(&out).expect("invalid padding");
+
+        assert_eq!(message, std::str::from_utf8(&decrypted_mal).unwrap())
+    }
+
+    #[test]
+    fn s05e03_g_is_p_minus_one() {
+        let message = "Hello World!";
+        let mut alice = Participant::new();
+        let mut bob = Participant::new();
+
+        let p_minus_one = get_nist_p() - BigUint::from(1u8);
+
+        let (p_a, g_a, a_a) = alice.send_first_message(&get_nist_p(), &p_minus_one);
+        let (_p_b, _g_b, a_b) = bob.send_first_message(&p_a, &g_a);
+
+        alice.receive_first_message(&a_b);
+        bob.receive_first_message(&a_a);
+
+        let (iv, cipher) = alice.encrypt_message(message.as_bytes());
+        let decrypted = bob.decrypt_message(&iv, &cipher);
+
+        assert_eq!(message, std::str::from_utf8(&decrypted).unwrap());
+
+        let session_key;
+        if a_a == a_b {
+            session_key = get_session_key_for(p_minus_one);
+        } else {
+            session_key = get_session_key_for(BigUint::from(1u8));
+        }
 
         let out = aes128_cbc_decode(&cipher, &session_key, &iv);
         let decrypted_mal = remove_pkcs7_padding(&out).expect("invalid padding");
