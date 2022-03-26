@@ -1,5 +1,6 @@
 use aes::{
-    cipher::generic_array::GenericArray, Aes128, Block, BlockDecrypt, BlockEncrypt, NewBlockCipher,
+    cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit},
+    Aes128, Block,
 };
 
 use crate::util::xor;
