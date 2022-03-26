@@ -181,10 +181,10 @@ mod tests {
         assert_eq!(message, std::str::from_utf8(&decrypted).unwrap());
 
         let session_key;
-        if a_a == a_b {
-            session_key = get_session_key_for(p_minus_one);
-        } else {
+        if a_a == BigUint::from(1u8) || a_b == BigUint::from(1u8) {
             session_key = get_session_key_for(BigUint::from(1u8));
+        } else {
+            session_key = get_session_key_for(p_minus_one);
         }
 
         let out = aes128_cbc_decode(&cipher, &session_key, &iv);
