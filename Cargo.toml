@@ -11,3 +11,4 @@ rand = "0.8.5"
 aes = "0.8.1"
 indicatif = "0.16.2"
 num-bigint = { version = "0.4", features = ["rand"] }
+num-primes = "0.3.0"
