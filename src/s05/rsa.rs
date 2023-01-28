@@ -66,4 +66,39 @@ mod tests {
 
         assert_eq!(m, new_m);
     }
+
+    #[test]
+    fn rsa_broadcast() {
+        let m = BigUint::from(42u8);
+        let strength = 128;
+
+        let (rsa_public_0, _rsa_private_0) = rsa_keygen(strength);
+        let (rsa_public_1, _rsa_private_1) = rsa_keygen(strength);
+        let (rsa_public_2, _rsa_private_2) = rsa_keygen(strength);
+
+        let c_0 = rsa_public_0.encrypt(&m);
+        let c_1 = rsa_public_1.encrypt(&m);
+        let c_2 = rsa_public_2.encrypt(&m);
+
+        let n_0 = rsa_public_0.n;
+        let n_1 = rsa_public_1.n;
+        let n_2 = rsa_public_2.n;
+
+        let m_s_0 = &n_1 * &n_2;
+        let m_s_1 = &n_0 * &n_2;
+        let m_s_2 = &n_0 * &n_1;
+
+        let inv_0 = invmod(&m_s_0, &n_0).unwrap();
+        let inv_1 = invmod(&m_s_1, &n_1).unwrap();
+        let inv_2 = invmod(&m_s_2, &n_2).unwrap();
+
+        let addition = (&c_0 * &m_s_0 * inv_0) + (&c_1 * &m_s_1 * inv_1) + (&c_2 * &m_s_2 * inv_2);
+        let n123 = &n_0 * &n_1 * &n_2;
+
+        let int = addition % n123;
+
+        let result = int.cbrt();
+
+        assert_eq!(result, m);
+    }
 }
