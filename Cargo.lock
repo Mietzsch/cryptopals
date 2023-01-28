@@ -241,8 +241,7 @@ dependencies = [
 [[package]]
 name = "num-primes"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38f25459a616100b36b5af31d8b05abbee29a5f29f83ddf95e78cb2268ab300a"
+source = "git+https://github.com/Mietzsch/num-primes#8069f3627b62a7811a1a91e84186f77fe78cd43e"
 dependencies = [
  "log",
  "num",
