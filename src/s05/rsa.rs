@@ -34,12 +34,8 @@ pub fn rsa_keygen(bits: usize) -> (RsaPublic, RsaPrivate) {
     let mut d = BigUint::from(0u8);
 
     while !is_coprime {
-        let p_prime = Generator::new_prime(bits);
-        let p_vec = p_prime.clone().to_bytes_be();
-        let p = BigUint::from_bytes_be(&p_vec); // use num-bigint crate in newest version
-        let q_prime = Generator::new_prime(bits);
-        let q_vec = q_prime.clone().to_bytes_be();
-        let q = BigUint::from_bytes_be(&q_vec); // use num-bigint crate in newest version
+        let p = Generator::new_prime(bits);
+        let q = Generator::new_prime(bits);
 
         n = &p * &q;
         let et = (p.sub(1u8)) * (q.sub(1u8));
@@ -50,10 +46,7 @@ pub fn rsa_keygen(bits: usize) -> (RsaPublic, RsaPrivate) {
         }
     }
 
-    (
-        RsaPublic { e, n: n.clone() },
-        RsaPrivate { d, n: n.clone() },
-    )
+    (RsaPublic { e, n: n.clone() }, RsaPrivate { d, n })
 }
 
 #[cfg(test)]

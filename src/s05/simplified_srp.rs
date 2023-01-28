@@ -43,9 +43,9 @@ impl Server {
     }
     pub fn login(&self, a_public: BigUint, challenge: [u8; 20]) -> bool {
         let base = a_public * self.v.modpow(&BigUint::from(self.u.unwrap()), &self.n);
-        let s = base.modpow(&self.b_private.as_ref().unwrap(), &self.n);
+        let s = base.modpow(self.b_private.as_ref().unwrap(), &self.n);
         let k = sha1(&s.to_bytes_be());
-        let response = sha1_hmac(&k, &vec![self.salt]);
+        let response = sha1_hmac(&k, &[self.salt]);
         challenge == response
     }
 }
@@ -96,7 +96,7 @@ impl Client {
             &self.n,
         );
         let k = sha1(&s.to_bytes_be());
-        (a_public, sha1_hmac(&k, &vec![self.salt.unwrap()]))
+        (a_public, sha1_hmac(&k, &[self.salt.unwrap()]))
     }
 }
 
@@ -104,6 +104,12 @@ pub struct MitmServer {
     salt: u8,
     n: BigUint,
     g: BigUint,
+}
+
+impl Default for MitmServer {
+    fn default() -> Self {
+        MitmServer::new()
+    }
 }
 
 impl MitmServer {
@@ -123,7 +129,7 @@ impl MitmServer {
         let mut i = 0;
         let pb = create_progress_bar(((len - 1) * 256).try_into().unwrap());
         while !overflow {
-            if self.check_pw(&a_public, &challenge, &mut pw) {
+            if self.check_pw(&a_public, &challenge, &pw) {
                 return pw;
             }
             while i < len {
@@ -144,15 +150,15 @@ impl MitmServer {
         }
         vec![0u8; len]
     }
-    fn check_pw(&self, a_public: &BigUint, challenge: &[u8; 20], pw: &mut Vec<u8>) -> bool {
+    fn check_pw(&self, a_public: &BigUint, challenge: &[u8; 20], pw: &[u8]) -> bool {
         let mut concat = vec![self.salt];
-        concat.append(&mut pw.clone());
+        concat.append(&mut pw.to_owned());
         let x_h = sha1(&concat);
         let x = BigUint::from_bytes_be(&x_h);
 
         let s = (a_public * self.g.modpow(&x, &self.n)) % &self.n;
         let k = sha1(&s.to_bytes_be());
-        let response = sha1_hmac(&k, &vec![self.salt]);
+        let response = sha1_hmac(&k, &[self.salt]);
         *challenge == response
     }
 }
@@ -174,7 +180,7 @@ mod tests {
 
         let result = server.login(a_public, challenge);
 
-        assert_eq!(result, true);
+        assert!(result);
     }
     #[test]
     fn s05e06_attack() {
