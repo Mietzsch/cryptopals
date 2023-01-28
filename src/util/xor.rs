@@ -33,7 +33,7 @@ mod tests {
 
         let xor = xor(&bytes1, &bytes2);
 
-        let out = hex::encode(&xor);
+        let out = hex::encode(xor);
 
         let reference = "746865206b696420646f6e277420706c6179";
 

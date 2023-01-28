@@ -4,11 +4,7 @@ pub fn get_bit(x: u64, index: usize) -> bool {
     let mask: u64 = 2_u64.pow(index.try_into().unwrap());
     let masked_x = x & mask;
     let bit = masked_x >> index;
-    if bit == 1 {
-        true
-    } else {
-        false
-    }
+    bit == 1
 }
 
 pub fn to_u64(bit: bool, index: usize) -> u64 {
@@ -29,19 +25,17 @@ pub fn u64_to_big_endian(x: u64) -> [u8; 8] {
 }
 
 pub fn u64_to_little_endian(x: u64) -> [u8; 8] {
-    let mut res = [0; 8];
-    for i in 0..8 {
-        let byte = (x >> (i * 8) & 0xff) as u8;
-        res[i] = byte;
+    let mut res = [0u8; 8];
+    for (i, value) in res.iter_mut().enumerate() {
+        *value = (x >> (i * 8) & 0xff) as u8;
     }
     res
 }
 
 pub fn u32_to_little_endian(x: u32) -> [u8; 4] {
     let mut res = [0; 4];
-    for i in 0..4 {
-        let byte = (x >> (i * 8) & 0xff) as u8;
-        res[i] = byte;
+    for (i, value) in res.iter_mut().enumerate() {
+        *value = (x >> (i * 8) & 0xff) as u8;
     }
     res
 }
@@ -60,9 +54,9 @@ pub fn u8_vector_to_u32(vec: &[u8]) -> u32 {
         panic!("Length should be 4")
     }
     let mut res = 0;
-    for i in 0..4 {
+    for value in vec.iter(){
         res <<= 8;
-        res += vec[i] as u32;
+        res += *value as u32;
     }
     res
 }
@@ -86,14 +80,14 @@ mod tests {
     #[test]
     fn test_bits() {
         let test_number = 167;
-        assert_eq!(get_bit(test_number, 7), true);
-        assert_eq!(get_bit(test_number, 6), false);
-        assert_eq!(get_bit(test_number, 5), true);
-        assert_eq!(get_bit(test_number, 4), false);
-        assert_eq!(get_bit(test_number, 3), false);
-        assert_eq!(get_bit(test_number, 2), true);
-        assert_eq!(get_bit(test_number, 1), true);
-        assert_eq!(get_bit(test_number, 0), true);
+        assert!(get_bit(test_number, 7));
+        assert!(!get_bit(test_number, 6));
+        assert!(get_bit(test_number, 5));
+        assert!(!get_bit(test_number, 4));
+        assert!(!get_bit(test_number, 3));
+        assert!(get_bit(test_number, 2));
+        assert!(get_bit(test_number, 1));
+        assert!(get_bit(test_number, 0));
     }
 
     #[test]
