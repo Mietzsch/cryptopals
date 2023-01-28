@@ -12,3 +12,4 @@ aes = "0.8.2"
 indicatif = "0.17.3"
 num-bigint = { version = "0.4", features = ["rand"] }
 num-primes = { git = "https://github.com/Mietzsch/num-primes" }
+rug = "1.19.0"

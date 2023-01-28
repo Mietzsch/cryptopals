@@ -1,46 +1,51 @@
-use std::ops::Sub;
-
-use num_bigint::BigUint;
-use num_primes::Generator;
-
-use crate::util::algebra::invmod;
+use rug::Integer;
 
 pub struct RsaPublic {
-    e: BigUint,
-    n: BigUint,
+    e: Integer,
+    n: Integer,
 }
 
 impl RsaPublic {
-    pub fn encrypt(&self, m: &BigUint) -> BigUint {
-        m.modpow(&self.e, &self.n)
+    pub fn encrypt(&self, m: &Integer) -> Integer {
+        m.clone().pow_mod(&self.e, &self.n).unwrap()
     }
 }
 
 pub struct RsaPrivate {
-    d: BigUint,
-    n: BigUint,
+    d: Integer,
+    n: Integer,
 }
 
 impl RsaPrivate {
-    pub fn decrypt(&self, c: &BigUint) -> BigUint {
-        c.modpow(&self.d, &self.n)
+    pub fn decrypt(&self, c: &rug::Integer) -> rug::Integer {
+        c.clone().pow_mod(&self.d, &self.n).unwrap()
+    }
+}
+
+pub fn generate_prime(bits: usize) -> Integer {
+    loop {
+        let mut random_vec = vec![0u8; bits / 8];
+        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut random_vec);
+        let candidate = Integer::from_digits(&random_vec, rug::integer::Order::Lsf);
+        if candidate.is_probably_prime(30) != rug::integer::IsPrime::No {
+            return candidate;
+        }
     }
 }
 
 pub fn rsa_keygen(bits: usize) -> (RsaPublic, RsaPrivate) {
     let mut is_coprime = false;
-    let mut n = BigUint::from(0u8);
-    let mut e = BigUint::from(0u8);
-    let mut d = BigUint::from(0u8);
+    let mut n = Integer::from(0);
+    let mut d = Integer::from(0);
+    let e = Integer::from(3);
 
     while !is_coprime {
-        let p = Generator::new_prime(bits);
-        let q = Generator::new_prime(bits);
+        let p = generate_prime(bits);
+        let q = generate_prime(bits);
 
-        n = &p * &q;
-        let et = (p.sub(1u8)) * (q.sub(1u8));
-        e = BigUint::from(3u8);
-        if let Some(d_real) = invmod(&e, &et) {
+        n = Integer::from(&p * &q);
+        let et = (p - 1) * (q - 1);
+        if let Ok(d_real) = e.clone().invert(&et) {
             d = d_real;
             is_coprime = true;
         }
@@ -56,9 +61,9 @@ mod tests {
 
     #[test]
     fn rsa() {
-        let m = BigUint::from(42u8);
+        let m = Integer::from(42);
 
-        let (rsa_public, rsa_private) = rsa_keygen(128);
+        let (rsa_public, rsa_private) = rsa_keygen(16);
 
         let c = rsa_public.encrypt(&m);
 
@@ -69,8 +74,8 @@ mod tests {
 
     #[test]
     fn rsa_broadcast() {
-        let m = BigUint::from(42u8);
-        let strength = 128;
+        let m = Integer::from(42);
+        let strength = 1024;
 
         let (rsa_public_0, _rsa_private_0) = rsa_keygen(strength);
         let (rsa_public_1, _rsa_private_1) = rsa_keygen(strength);
@@ -80,24 +85,24 @@ mod tests {
         let c_1 = rsa_public_1.encrypt(&m);
         let c_2 = rsa_public_2.encrypt(&m);
 
-        let n_0 = rsa_public_0.n;
-        let n_1 = rsa_public_1.n;
-        let n_2 = rsa_public_2.n;
+        let n_0 = &rsa_public_0.n;
+        let n_1 = &rsa_public_1.n;
+        let n_2 = &rsa_public_2.n;
 
-        let m_s_0 = &n_1 * &n_2;
-        let m_s_1 = &n_0 * &n_2;
-        let m_s_2 = &n_0 * &n_1;
+        let m_s_0 = Integer::from(n_1 * n_2);
+        let m_s_1 = Integer::from(n_0 * n_2);
+        let m_s_2 = Integer::from(n_0 * n_1);
 
-        let inv_0 = invmod(&m_s_0, &n_0).unwrap();
-        let inv_1 = invmod(&m_s_1, &n_1).unwrap();
-        let inv_2 = invmod(&m_s_2, &n_2).unwrap();
+        let inv_0 = m_s_0.clone().invert(n_0).unwrap();
+        let inv_1 = m_s_1.clone().invert(n_1).unwrap();
+        let inv_2 = m_s_2.clone().invert(n_2).unwrap();
 
-        let addition = (&c_0 * &m_s_0 * inv_0) + (&c_1 * &m_s_1 * inv_1) + (&c_2 * &m_s_2 * inv_2);
-        let n123 = &n_0 * &n_1 * &n_2;
+        let addition = (c_0 * m_s_0 * inv_0) + (c_1 * m_s_1 * inv_1) + (c_2 * m_s_2 * inv_2);
+        let n123 = Integer::from(n_0 * n_1) * n_2;
 
         let int = addition % n123;
 
-        let result = int.cbrt();
+        let result = int.root(3);
 
         assert_eq!(result, m);
     }
