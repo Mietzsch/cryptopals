@@ -43,7 +43,7 @@ impl XorAnalyzer {
         for (_, val) in map.iter_mut() {
             *val /= input.len() as f64;
         }
-        XorAnalyzer { map: map }
+        XorAnalyzer { map }
     }
 
     pub fn score_text(&self, bytes: &[u8]) -> f64 {
@@ -64,10 +64,8 @@ impl XorAnalyzer {
 fn compute_score(thismap: &HashMap<u8, f64>, key: u8, map: &HashMap<u8, f64>) -> f64 {
     let mut res = 0.0;
     for i in 0..=255 {
-        let a = thismap
-            .get_key_value(&(i ^ key))
-            .unwrap_or_else(|| (&i, &0.0));
-        let b = map.get_key_value(&i).unwrap_or_else(|| (&i, &0.0));
+        let a = thismap.get_key_value(&(i ^ key)).unwrap_or((&i, &0.0));
+        let b = map.get_key_value(&i).unwrap_or((&i, &0.0));
         res += (a.1 - b.1) * (a.1 - b.1);
     }
     res.sqrt()
@@ -87,7 +85,7 @@ mod tests {
             .expect("Something went wrong reading the file");
         let testdata = testdata.replace('\n', "");
 
-        let analyzer = XorAnalyzer::new(&testdata.as_bytes());
+        let analyzer = XorAnalyzer::new(testdata.as_bytes());
         println!("Finished reading map");
 
         let input1 = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
@@ -109,7 +107,7 @@ mod tests {
             .expect("Something went wrong reading the shakespeare file");
         let testdata = testdata.replace('\n', "");
 
-        let analyzer = XorAnalyzer::new(&testdata.as_bytes());
+        let analyzer = XorAnalyzer::new(testdata.as_bytes());
         println!("Finished reading map");
 
         let input = fs::read_to_string("data/set1/4.txt")

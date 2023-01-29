@@ -93,7 +93,7 @@ mod tests {
 
         let key = "YELLOW SUBMARINE";
 
-        let dec = aes128_ctr_decode(&secret.to_bytes(), key.as_bytes(), &iv);
+        let dec = aes128_ctr_decode(secret.to_bytes(), key.as_bytes(), &iv);
 
         let plain = "Yo, VIP Let's kick it Ice, Ice, baby Ice, Ice, baby ";
         assert_eq!(plain, from_utf8(&dec).unwrap());

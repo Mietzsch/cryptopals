@@ -84,7 +84,7 @@ mod tests {
         let input = fs::read_to_string("data/set1/7.txt")
             .expect("Something went wrong reading the challenge file");
 
-        let input = input.replace("\n", "");
+        let input = input.replace('\n', "");
 
         let input_bytes = Base64::new_from_string(&input).unwrap();
 

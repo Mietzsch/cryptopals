@@ -25,7 +25,7 @@ impl SHA1Oracle {
             }
         }
 
-        return false;
+        false
     }
 }
 
@@ -36,7 +36,7 @@ pub fn hack_sha1_oracle(
     new_message: &[u8],
 ) -> Option<(Vec<u8>, [u8; 20])> {
     for i in 0..=32 {
-        let (glue_padding, forged_hash) = extend_sha1(&old_hash, new_message, i, old_message.len());
+        let (glue_padding, forged_hash) = extend_sha1(old_hash, new_message, i, old_message.len());
         let forged_message = [old_message, &glue_padding, new_message].concat();
         if orcale.is_admin(&forged_message, &forged_hash) {
             return Some((forged_message, forged_hash));

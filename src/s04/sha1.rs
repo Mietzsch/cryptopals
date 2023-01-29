@@ -103,7 +103,7 @@ fn sha1_chunk_loop(
     let mut d = *h3;
     let mut e = *h4;
 
-    for i in 0..80 {
+    for (i, item) in w.iter().enumerate() {
         let f;
         let k;
 
@@ -133,7 +133,7 @@ fn sha1_chunk_loop(
             .wrapping_add(f)
             .wrapping_add(e)
             .wrapping_add(k)
-            .wrapping_add(w[i]);
+            .wrapping_add(*item);
         e = d;
         d = c;
         c = b.rotate_left(30);
@@ -174,7 +174,7 @@ mod tests {
         let sha_value0 = sha1(vec0.as_bytes());
 
         assert_eq!(
-            hex::encode(&sha_value0),
+            hex::encode(sha_value0),
             "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         );
 
@@ -182,7 +182,7 @@ mod tests {
         let sha_value1 = sha1(vec1.as_bytes());
 
         assert_eq!(
-            hex::encode(&sha_value1).to_ascii_uppercase(),
+            hex::encode(sha_value1).to_ascii_uppercase(),
             "A9993E364706816ABA3E25717850C26C9CD0D89D"
         );
 
@@ -190,7 +190,7 @@ mod tests {
         let sha_value2 = sha1(vec2.as_bytes());
 
         assert_eq!(
-            hex::encode(&sha_value2).to_ascii_uppercase(),
+            hex::encode(sha_value2).to_ascii_uppercase(),
             "84983E441C3BD26EBAAE4AA1F95129E5E54670F1"
         );
 
@@ -198,7 +198,7 @@ mod tests {
         let sha_value3 = sha1(vec3.as_bytes());
 
         assert_eq!(
-            hex::encode(&sha_value3),
+            hex::encode(sha_value3),
             "68ac906495480a3404beee4874ed853a037a7a8f"
         );
     }

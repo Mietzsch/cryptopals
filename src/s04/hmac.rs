@@ -35,7 +35,7 @@ mod tests {
         let digest1 = sha1_hmac(&key1, data1.as_bytes());
 
         assert_eq!(
-            hex::encode(&digest1),
+            hex::encode(digest1),
             "b617318655057264e28bc0b6fb378c8ef146be00"
         );
 
@@ -46,7 +46,7 @@ mod tests {
         let digest2 = sha1_hmac(&key2, data2.as_bytes());
 
         assert_eq!(
-            hex::encode(&digest2),
+            hex::encode(digest2),
             "aa4ae5e15272d00e95705637ce8a3b55ed402112"
         );
 
@@ -57,7 +57,7 @@ mod tests {
         let digest3 = sha1_hmac(&key3, &data3);
 
         assert_eq!(
-            hex::encode(&digest3),
+            hex::encode(digest3),
             "125d7342b9ac11cd91a39af48aa17b4f63f175d3"
         );
 
@@ -68,7 +68,7 @@ mod tests {
         let digest4 = sha1_hmac(&key4, data4.as_bytes());
 
         assert_eq!(
-            hex::encode(&digest4),
+            hex::encode(digest4),
             "e8e99d0f45237d786d6bbaa7965c7808bbff1a91"
         );
     }

@@ -38,7 +38,7 @@ mod tests {
 
         let cipher = oracle.encrypt(&plain);
 
-        let tampered_cipher = [&cipher[0..16], &vec![0; 16], &cipher[0..16]].concat();
+        let tampered_cipher = [&cipher[0..16], &[0; 16], &cipher[0..16]].concat();
 
         let tampered_plain = oracle.decrypt(&tampered_cipher);
 

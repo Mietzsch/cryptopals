@@ -22,7 +22,7 @@ pub fn aes128_cbc_encode(plain: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     for chunk in plain.chunks(16) {
         let mut block = Block::clone_from_slice(&xor::xor(&pkcs7_padding(chunk, 16), &xor_text));
         aes.encrypt_block(&mut block);
-        xor_text = Vec::<u8>::from(block.to_vec());
+        xor_text = block.to_vec();
         res.append(&mut block.to_vec());
     }
 
@@ -50,7 +50,7 @@ pub fn aes128_cbc_decode(cipher: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     for chunk in cipher.chunks(16) {
         let mut block = Block::clone_from_slice(chunk);
         aes.decrypt_block(&mut block);
-        res.append(&mut xor::xor(&block.to_vec(), &xor_text));
+        res.append(&mut xor::xor(&block, &xor_text));
         xor_text = Vec::<u8>::from(chunk);
     }
 
@@ -74,7 +74,7 @@ mod tests {
         let input = fs::read_to_string("data/set2/2.txt")
             .expect("Something went wrong reading the challenge file");
 
-        let input = input.replace("\n", "");
+        let input = input.replace('\n', "");
 
         let input_bytes = Base64::new_from_string(&input).unwrap();
 

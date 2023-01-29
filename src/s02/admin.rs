@@ -85,7 +85,7 @@ pub fn cut_and_paste() -> String {
     let email = "123456@78.com";
     assert!(email.as_bytes().len() == 13);
 
-    let mut profile = oracle.profile_for(&email.as_bytes());
+    let mut profile = oracle.profile_for(email.as_bytes());
 
     profile.splice(32.., admin_cipher.iter().cloned());
 
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn s02e05() {
-        assert_eq!(cut_and_paste().contains("role=admin"), true);
+        assert!(cut_and_paste().contains("role=admin"));
     }
 
     #[test]

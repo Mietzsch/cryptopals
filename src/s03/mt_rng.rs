@@ -30,10 +30,7 @@ impl MTRng {
         for i in 1..MT_N {
             mt[i] = as_w_bits(MT_F * (mt[i - 1] ^ (mt[i - 1] >> (MT_W - 2))) + i as u64);
         }
-        MTRng {
-            mt: mt,
-            index: MT_N,
-        }
+        MTRng { mt, index: MT_N }
     }
     pub fn extract_number(&mut self) -> u32 {
         match self.index.cmp(&MT_N) {
@@ -46,7 +43,7 @@ impl MTRng {
 
         let y = temper(self.mt[self.index]);
 
-        self.index = self.index + 1;
+        self.index += 1;
         as_w_bits(y) as u32
     }
     fn twist(&mut self) {
@@ -54,7 +51,7 @@ impl MTRng {
             let x = (self.mt[i] & MT_UPPER_MASK) + (self.mt[(i + 1) % MT_N] & MT_LOWER_MASK);
             let mut x_a = x >> 1;
             if x % 2 != 0 {
-                x_a = x_a ^ MT_A;
+                x_a ^= MT_A;
             }
             self.mt[i] = self.mt[(i + MT_M) % MT_N] ^ x_a;
         }
@@ -85,7 +82,7 @@ fn untemper_right(x: u64, rightshift: usize, and_number: u64) -> u64 {
     for i in (0..64).rev() {
         let i_as_usize = i.try_into().unwrap();
         if i >= 64 - rightshift {
-            res = res + to_u64(get_bit(x, i_as_usize), i_as_usize)
+            res += to_u64(get_bit(x, i_as_usize), i_as_usize)
         } else {
             res = res
                 + to_u64(
@@ -106,7 +103,7 @@ fn untemper_left(x: u64, leftshift: usize, and_number: u64) -> u64 {
     for i in 0..64 {
         let i_as_usize = i.try_into().unwrap();
         if i < leftshift {
-            res = res + to_u64(get_bit(x, i_as_usize), i_as_usize)
+            res += to_u64(get_bit(x, i_as_usize), i_as_usize)
         } else {
             res = res
                 + to_u64(
@@ -131,13 +128,10 @@ fn untemper(y: u64) -> u64 {
 pub fn clone_mt_rng(original: &mut MTRng) -> Option<MTRng> {
     for _ in 0..MT_N {
         let mut mt = [0; MT_N];
-        for i in 0..MT_N {
-            mt[i] = untemper(original.extract_number().into());
+        for item in mt.iter_mut().take(MT_N) {
+            *item = untemper(original.extract_number().into());
         }
-        let mut potential_clone = MTRng {
-            mt: mt,
-            index: MT_N,
-        };
+        let mut potential_clone = MTRng { mt, index: MT_N };
         if original.extract_number() == potential_clone.extract_number() {
             return Some(potential_clone);
         }

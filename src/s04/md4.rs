@@ -180,16 +180,16 @@ mod tests {
         let vec0 = "";
         let md4_value0 = md4(vec0.as_bytes());
 
-        assert_eq!(hex::encode(&md4_value0), "31d6cfe0d16ae931b73c59d7e0c089c0");
+        assert_eq!(hex::encode(md4_value0), "31d6cfe0d16ae931b73c59d7e0c089c0");
 
         let vec1 = "a";
         let md4_value1 = md4(vec1.as_bytes());
 
-        assert_eq!(hex::encode(&md4_value1), "bde52cb31de33e46245e05fbdbd6fb24");
+        assert_eq!(hex::encode(md4_value1), "bde52cb31de33e46245e05fbdbd6fb24");
 
         let vec2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         let md4_value2 = md4(vec2.as_bytes());
 
-        assert_eq!(hex::encode(&md4_value2), "043f8582f241db351ce627e153e7f0e4");
+        assert_eq!(hex::encode(md4_value2), "043f8582f241db351ce627e153e7f0e4");
     }
 }

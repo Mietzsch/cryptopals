@@ -7,14 +7,11 @@ pub fn attack_fixed_none(ciphertexts: Vec<Vec<u8>>, analyzer: &KeyXorAnalyzer) -
             |acc, vec| if vec.len() < acc { vec.len() } else { acc },
         );
 
-    let cipher_appended = ciphertexts
-        .clone()
-        .iter()
-        .fold(Vec::<u8>::new(), |res, vec| {
-            let mut truncated = vec.clone();
-            truncated.truncate(least_len);
-            [res, truncated].concat()
-        });
+    let cipher_appended = ciphertexts.iter().fold(Vec::<u8>::new(), |res, vec| {
+        let mut truncated = vec.clone();
+        truncated.truncate(least_len);
+        [res, truncated].concat()
+    });
 
     let analyze_res = analyzer.analyze_with_fixed_keylen(&cipher_appended, least_len, true);
 
@@ -43,7 +40,7 @@ mod tests {
         let plain = fs::read_to_string("data/set3/4.txt")
             .expect("Something went wrong reading the plain file");
 
-        let analyzer = KeyXorAnalyzer::new(&testdata.as_bytes());
+        let analyzer = KeyXorAnalyzer::new(testdata.as_bytes());
         println!("Finished reading map");
 
         let input = fs::read_to_string("data/set3/4_cipher.txt")

@@ -61,7 +61,7 @@ pub fn decrypt_ecb(oracle: &impl EncryptionOracle) -> Vec<u8> {
     let mut result = Vec::new();
 
     let blocksize = get_blocksize(oracle);
-    println!(" blocksize: {}...", blocksize);
+    println!(" blocksize: {blocksize}...");
 
     let count = aes_ecb_detector(&oracle.encrypt(&vec![0; 10 * blocksize]));
     if count >= 5 {
@@ -72,10 +72,7 @@ pub fn decrypt_ecb(oracle: &impl EncryptionOracle) -> Vec<u8> {
 
     let (random_prefix_length, blocks) = get_random_prefix_length(oracle, blocksize);
 
-    println!(
-        " prefix length: {}, plaintext blocks to decrypt: {}...",
-        random_prefix_length, blocks
-    );
+    println!(" prefix length: {random_prefix_length}, plaintext blocks to decrypt: {blocks}...");
 
     let mut previous_block = vec![0; blocksize];
 
@@ -140,7 +137,7 @@ fn get_random_prefix_length(oracle: &impl EncryptionOracle, blocksize: usize) ->
 
     let zero_encryption = occurance_map
         .iter()
-        .max_by(|a, b| a.1.cmp(&b.1))
+        .max_by(|a, b| a.1.cmp(b.1))
         .map(|(k, _v)| k)
         .unwrap();
 
@@ -229,7 +226,7 @@ mod tests {
     fn s02e04() {
         let input = fs::read_to_string("data/set2/4.txt")
             .expect("Something went wrong reading the challenge file");
-        let input = input.replace("\n", "");
+        let input = input.replace('\n', "");
 
         let oracle = ECBOracleSimple {
             secret: Base64::new_from_string(&input).unwrap().to_bytes().to_vec(),
@@ -250,7 +247,7 @@ mod tests {
     fn s02e06() {
         let input = fs::read_to_string("data/set2/4.txt")
             .expect("Something went wrong reading the challenge file");
-        let input = input.replace("\n", "");
+        let input = input.replace('\n', "");
 
         let random_vec_len = rand::thread_rng().gen_range(0..32);
         let mut random_vec = vec![0; random_vec_len];

@@ -35,7 +35,7 @@ pub fn crack_seed(known_plaintext: &[u8], ciphertext: &[u8]) -> Option<u16> {
     let progress_bar = create_progress_bar(u16::MAX as u64);
     for key in 0..=u16::MAX {
         let new_ciper = mt_rng_ctr_encode(&test_plain, key);
-        if &new_ciper[plaintext_offset..] == &ciphertext[plaintext_offset..] {
+        if new_ciper[plaintext_offset..] == ciphertext[plaintext_offset..] {
             return Some(key);
         }
         if key % 256 == 0 {

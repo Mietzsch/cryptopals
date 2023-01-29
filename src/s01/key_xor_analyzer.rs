@@ -40,7 +40,7 @@ impl KeyXorAnalyzer {
         let mut res = (Vec::<u8>::new(), f64::INFINITY, Vec::<u8>::new());
 
         for (keylen, score) in &distances[0..keys_to_try] {
-            println!("possible size {} with score {}", keylen, score);
+            println!("possible size {keylen} with score {score}");
 
             let fixed_keylen_score = self.analyze_with_fixed_keylen(cipher, *keylen, false);
             if fixed_keylen_score.1 < res.1 {
@@ -91,11 +91,11 @@ impl KeyXorAnalyzer {
 
         let plain = key_xor(cipher, &keys);
 
-        let key_str = str::from_utf8(&keys).unwrap_or_else(|_| "NOT UTF8");
+        let key_str = str::from_utf8(&keys).unwrap_or("NOT UTF8");
 
         let score = self.xor_analyzer.score_text(&plain);
 
-        println!("    Final score: {} with key {}", score, key_str);
+        println!("    Final score: {score} with key {key_str}");
         (plain, score, keys)
     }
 }
@@ -115,13 +115,13 @@ mod tests {
             .expect("Something went wrong reading the shakespeare file");
         let testdata = testdata.replace('\n', "");
 
-        let analyzer = KeyXorAnalyzer::new(&testdata.as_bytes());
+        let analyzer = KeyXorAnalyzer::new(testdata.as_bytes());
         println!("Finished reading map");
 
         let input = fs::read_to_string("data/set1/6.txt")
             .expect("Something went wrong reading the challenge file");
 
-        let input = input.replace("\n", "");
+        let input = input.replace('\n', "");
 
         let input_bytes = Base64::new_from_string(&input).unwrap();
 

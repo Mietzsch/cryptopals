@@ -28,10 +28,7 @@ impl CBCPaddingOracle {
     pub fn has_valid_padding(&self, iv: &[u8], cipher: &[u8]) -> bool {
         let plain = aes128_cbc_decode(cipher, &self.key, iv);
         let padding_result = remove_pkcs7_padding(&plain);
-        match padding_result {
-            Ok(_) => return true,
-            Err(_) => return false,
-        }
+        padding_result.is_ok()
     }
 }
 
@@ -67,12 +64,12 @@ fn cbc_padding_attack_blocks(
     let mut zeroizing_iv = [0; 16];
 
     for byte_number in (0..16).rev() {
-        let mut iv_for_this_byte = zeroizing_iv.clone();
-        for idx in (byte_number + 1)..16 {
-            iv_for_this_byte[idx] ^= (16 - byte_number) as u8;
+        let mut iv_for_this_byte = zeroizing_iv;
+        for item in iv_for_this_byte.iter_mut().skip(byte_number + 1) {
+            *item ^= (16 - byte_number) as u8;
         }
         for i in 0..=255 {
-            let mut iv = iv_for_this_byte.clone();
+            let mut iv = iv_for_this_byte;
             iv[byte_number] ^= i;
             if oracle.has_valid_padding(&iv, current) {
                 if byte_number > 0 {

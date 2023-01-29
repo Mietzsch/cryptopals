@@ -26,7 +26,7 @@ impl TimingOracle {
             }
             thread::sleep(self.timeout);
         }
-        return true;
+        true
     }
 }
 
@@ -49,56 +49,52 @@ pub fn break_timing_oracle(file: &[u8], oracle: &TimingOracle, samples: usize) -
             if timing_result.0 {
                 println!("Found matching signature!");
                 return result;
-            } else {
-                if i != 0 {
-                    if timing_result.1 > times[i - 1] + baseline / 1.25 {
-                        // println!(
-                        //     "New time: {}, to beat: {}",
-                        //     timing_result.1,
-                        //     best_time + baseline / 2.0
-                        // );
-                        times[i] = timing_result.1;
-                        best_byte = j;
-                        found_something = true;
-                        break;
-                    }
-                } else {
-                    if timing_result.1 > times[i] + baseline / 1.25 {
-                        // println!(
-                        //     "New time: {}, to beat: {}",
-                        //     timing_result.1,
-                        //     best_time + baseline / 2.0
-                        // );
-                        times[i] = timing_result.1;
-                        best_byte = j;
-                        found_something = true;
-                    }
+            } else if i != 0 {
+                if timing_result.1 > times[i - 1] + baseline / 1.25 {
+                    // println!(
+                    //     "New time: {}, to beat: {}",
+                    //     timing_result.1,
+                    //     best_time + baseline / 2.0
+                    // );
+                    times[i] = timing_result.1;
+                    best_byte = j;
+                    found_something = true;
+                    break;
                 }
+            } else if timing_result.1 > times[i] + baseline / 1.25 {
+                // println!(
+                //     "New time: {}, to beat: {}",
+                //     timing_result.1,
+                //     best_time + baseline / 2.0
+                // );
+                times[i] = timing_result.1;
+                best_byte = j;
+                found_something = true;
             }
         }
         if i == 0 {
             baseline = times[i];
-            println!("Set baseline to {}", baseline);
+            println!("Set baseline to {baseline}");
         }
         if found_something {
             if i == 19 && !time_result(file, &result, oracle, samples).0 {
-                i = i - 1;
-                println!("Go back to pos {}", i);
+                i -= 1;
+                println!("Go back to pos {i}");
             } else {
                 println!(
                     "Found byte {} in pos {}, new longest time: {}",
                     best_byte, i, times[i]
                 );
                 result[i] = best_byte;
-                i = i + 1;
+                i += 1;
             }
         } else {
-            i = i - 1;
-            println!("Go back to pos {}", i);
+            i -= 1;
+            println!("Go back to pos {i}");
         }
     }
 
-    return result;
+    result
 }
 
 fn time_result(
