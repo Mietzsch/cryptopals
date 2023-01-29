@@ -57,7 +57,7 @@ impl Base64 {
         &self.bytes
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn serialize(&self) -> String {
         let mut string = String::new();
 
         let len = self.bytes.len();
@@ -102,7 +102,7 @@ impl Base64 {
 
 impl fmt::Display for Base64 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.serialize())
     }
 }
 
@@ -137,32 +137,32 @@ fn fourbyte_to_bytes(b1: &u8, b2: &u8, b3: &u8, b4: &u8) -> Result<Vec<u8>> {
 fn threebyte_to_string(b1: &u8, b2: &u8, b3: &u8) -> (char, char, char, char) {
     let mut res = ('0', '0', '0', '0');
 
-    let mut firstbits: u8 = b1.clone();
+    let mut firstbits: u8 = *b1;
     let mut tmp;
 
     firstbits &= 255 - 3;
     firstbits >>= 2;
     res.0 = sixbits_to_char(firstbits);
 
-    let mut secondbits: u8 = b1.clone();
+    let mut secondbits: u8 = *b1;
     secondbits &= 3;
     secondbits <<= 4;
-    tmp = b2.clone();
+    tmp = *b2;
     tmp &= 255 - 15;
     tmp >>= 4;
     secondbits += tmp;
     res.1 = sixbits_to_char(secondbits);
 
-    let mut thirdbits: u8 = b2.clone();
+    let mut thirdbits: u8 = *b2;
     thirdbits &= 15;
     thirdbits <<= 2;
-    tmp = b3.clone();
+    tmp = *b3;
     tmp &= 255 - 63;
     tmp >>= 6;
     thirdbits += tmp;
     res.2 = sixbits_to_char(thirdbits);
 
-    let mut fourthbits = b3.clone();
+    let mut fourthbits = *b3;
     fourthbits &= 63;
     res.3 = sixbits_to_char(fourthbits);
 
@@ -321,7 +321,7 @@ mod tests {
         let base64 = Base64::new_from_bytes(&bytes);
 
         assert_eq!(
-            base64.to_string(),
+            base64.serialize(),
             "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
         );
     }
@@ -344,9 +344,9 @@ mod tests {
     fn encoding_with_two_remainder() {
         let input = "f";
         let bytes = input.as_bytes();
-        let base64 = Base64::new_from_bytes(&bytes);
+        let base64 = Base64::new_from_bytes(bytes);
 
-        assert_eq!(base64.to_string(), "Zg==");
+        assert_eq!(base64.serialize(), "Zg==");
     }
 
     #[test]
@@ -363,9 +363,9 @@ mod tests {
     fn encoding_with_one_remainder() {
         let input = "fo";
         let bytes = input.as_bytes();
-        let base64 = Base64::new_from_bytes(&bytes);
+        let base64 = Base64::new_from_bytes(bytes);
 
-        assert_eq!(base64.to_string(), "Zm8=");
+        assert_eq!(base64.serialize(), "Zm8=");
     }
 
     #[test]
