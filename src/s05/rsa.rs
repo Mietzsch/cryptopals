@@ -1,5 +1,7 @@
 use rug::Integer;
 
+use crate::util::generators::generate_prime;
+
 pub struct RsaPublic {
     e: Integer,
     n: Integer,
@@ -19,17 +21,6 @@ pub struct RsaPrivate {
 impl RsaPrivate {
     pub fn decrypt(&self, c: &rug::Integer) -> rug::Integer {
         c.clone().pow_mod(&self.d, &self.n).unwrap()
-    }
-}
-
-pub fn generate_prime(bits: usize) -> Integer {
-    loop {
-        let mut random_vec = vec![0u8; bits / 8];
-        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut random_vec);
-        let candidate = Integer::from_digits(&random_vec, rug::integer::Order::Lsf);
-        if candidate.is_probably_prime(30) != rug::integer::IsPrime::No {
-            return candidate;
-        }
     }
 }
 

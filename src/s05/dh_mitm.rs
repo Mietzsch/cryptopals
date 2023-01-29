@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use num_bigint::BigUint;
+use rug::Integer;
 
 use crate::{
     s02::{
@@ -14,9 +14,15 @@ use crate::{
 use super::dh::*;
 
 pub struct Participant {
-    private_key: Option<BigUint>,
-    p: Option<BigUint>,
+    private_key: Option<Integer>,
+    p: Option<Integer>,
     session_key: Option<[u8; 16]>,
+}
+
+impl Default for Participant {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Participant {
@@ -28,19 +34,19 @@ impl Participant {
         }
     }
 
-    pub fn send_first_message(&mut self, p: &BigUint, g: &BigUint) -> (BigUint, BigUint, BigUint) {
+    pub fn send_first_message(&mut self, p: &Integer, g: &Integer) -> (Integer, Integer, Integer) {
         let (a_public, a_private) = generate_dh_key(p, g);
         self.private_key = Some(a_private);
         self.p = Some(p.clone());
         (p.clone(), g.clone(), a_public)
     }
-    pub fn receive_first_message(&mut self, a: &BigUint) {
+    pub fn receive_first_message(&mut self, a: &Integer) {
         let shared_secret = generate_session_key(
             a,
-            &self.private_key.as_ref().unwrap(),
-            &self.p.as_ref().unwrap(),
+            self.private_key.as_ref().unwrap(),
+            self.p.as_ref().unwrap(),
         );
-        let hash = sha1(&shared_secret.to_bytes_be());
+        let hash = sha1(&shared_secret.to_digits(rug::integer::Order::Msf));
         self.session_key = Some(hash[0..16].try_into().unwrap());
     }
     pub fn encrypt_message(&self, plain: &[u8]) -> (Vec<u8>, Vec<u8>) {
@@ -56,8 +62,8 @@ impl Participant {
     }
 }
 
-pub fn get_session_key_for(shared_secret: BigUint) -> [u8; 16] {
-    let hash = sha1(&shared_secret.to_bytes_be());
+pub fn get_session_key_for(shared_secret: Integer) -> [u8; 16] {
+    let hash = sha1(&shared_secret.to_digits(rug::integer::Order::Msf));
     hash[0..16].try_into().unwrap()
 }
 
@@ -103,7 +109,7 @@ mod tests {
 
         assert_eq!(message, std::str::from_utf8(&decrypted).unwrap());
 
-        let session_key = get_session_key_for(BigUint::from(0u8));
+        let session_key = get_session_key_for(Integer::from(0));
 
         let out = aes128_cbc_decode(&cipher, &session_key, &iv);
         let decrypted_mal = remove_pkcs7_padding(&out).expect("invalid padding");
@@ -117,7 +123,7 @@ mod tests {
         let mut alice = Participant::new();
         let mut bob = Participant::new();
 
-        let (p_a, g_a, a_a) = alice.send_first_message(&get_nist_p(), &BigUint::from(1u8));
+        let (p_a, g_a, a_a) = alice.send_first_message(&get_nist_p(), &Integer::from(1));
         let (_p_b, _g_b, a_b) = bob.send_first_message(&p_a, &g_a);
 
         alice.receive_first_message(&a_b);
@@ -128,7 +134,7 @@ mod tests {
 
         assert_eq!(message, std::str::from_utf8(&decrypted).unwrap());
 
-        let session_key = get_session_key_for(BigUint::from(1u8));
+        let session_key = get_session_key_for(Integer::from(1));
 
         let out = aes128_cbc_decode(&cipher, &session_key, &iv);
         let decrypted_mal = remove_pkcs7_padding(&out).expect("invalid padding");
@@ -153,7 +159,7 @@ mod tests {
 
         assert_eq!(message, std::str::from_utf8(&decrypted).unwrap());
 
-        let session_key = get_session_key_for(BigUint::from(0u8));
+        let session_key = get_session_key_for(Integer::from(0));
 
         let out = aes128_cbc_decode(&cipher, &session_key, &iv);
         let decrypted_mal = remove_pkcs7_padding(&out).expect("invalid padding");
@@ -167,7 +173,7 @@ mod tests {
         let mut alice = Participant::new();
         let mut bob = Participant::new();
 
-        let p_minus_one = get_nist_p() - BigUint::from(1u8);
+        let p_minus_one = get_nist_p() - Integer::from(1);
 
         let (p_a, g_a, a_a) = alice.send_first_message(&get_nist_p(), &p_minus_one);
         let (_p_b, _g_b, a_b) = bob.send_first_message(&p_a, &g_a);
@@ -180,12 +186,11 @@ mod tests {
 
         assert_eq!(message, std::str::from_utf8(&decrypted).unwrap());
 
-        let session_key;
-        if a_a == BigUint::from(1u8) || a_b == BigUint::from(1u8) {
-            session_key = get_session_key_for(BigUint::from(1u8));
+        let session_key = if a_a == 1 || a_b == 1 {
+            get_session_key_for(Integer::from(1))
         } else {
-            session_key = get_session_key_for(p_minus_one);
-        }
+            get_session_key_for(p_minus_one)
+        };
 
         let out = aes128_cbc_decode(&cipher, &session_key, &iv);
         let decrypted_mal = remove_pkcs7_padding(&out).expect("invalid padding");

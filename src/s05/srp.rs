@@ -1,4 +1,4 @@
-use num_bigint::BigUint;
+use rug::Integer;
 
 use crate::s04::{hmac::sha1_hmac, sha1::sha1};
 
@@ -6,13 +6,13 @@ use super::dh::{generate_dh_key, get_nist_g, get_nist_p};
 
 pub struct Server {
     salt: u8,
-    n: BigUint,
-    g: BigUint,
-    k: BigUint,
-    v: BigUint,
-    a_public: Option<BigUint>,
-    b_private: Option<BigUint>,
-    u: Option<BigUint>,
+    n: Integer,
+    g: Integer,
+    k: Integer,
+    v: Integer,
+    a_public: Option<Integer>,
+    b_private: Option<Integer>,
+    u: Option<Integer>,
 }
 
 impl Server {
@@ -21,11 +21,11 @@ impl Server {
         let mut concat = vec![salt];
         concat.append(&mut password.to_owned());
         let x_h = sha1(&concat);
-        let x = BigUint::from_bytes_be(&x_h);
+        let x = Integer::from_digits(&x_h, rug::integer::Order::Msf);
         let g = get_nist_g();
         let n = get_nist_p();
-        let k = BigUint::from(3u8);
-        let v = g.modpow(&x, &n);
+        let k = Integer::from(3);
+        let v = g.clone().pow_mod(&x, &n).unwrap();
         Server {
             salt,
             n,
@@ -37,7 +37,7 @@ impl Server {
             u: None,
         }
     }
-    pub fn send_first_server_message(&mut self) -> (u8, BigUint) {
+    pub fn send_first_server_message(&mut self) -> (u8, Integer) {
         let (b_public, b_private) = generate_dh_key(&self.n, &self.g);
         self.b_private = Some(b_private);
         (
@@ -46,21 +46,30 @@ impl Server {
         )
     }
 
-    pub fn compute_u(&mut self, a: &BigUint) {
-        let mut hash_input = a.to_bytes_be();
+    pub fn compute_u(&mut self, a: &Integer) {
+        let mut hash_input = a.to_digits::<u8>(rug::integer::Order::Msf);
         let b = (self.k.clone() * self.v.clone()
-            + self.g.modpow(self.b_private.as_ref().unwrap(), &self.n))
+            + self
+                .g
+                .clone()
+                .pow_mod(self.b_private.as_ref().unwrap(), &self.n)
+                .unwrap())
             % self.n.clone();
-        hash_input.append(&mut b.to_bytes_be());
-        self.u = Some(BigUint::from_bytes_be(&hash_input));
+        hash_input.append(&mut b.to_digits(rug::integer::Order::Msf));
+        self.u = Some(Integer::from_digits(&hash_input, rug::integer::Order::Msf));
         self.a_public = Some(a.to_owned());
     }
 
     pub fn login(&self, k_in: &[u8; 20]) -> bool {
         let s = (self.a_public.as_ref().unwrap()
-            * self.v.modpow(self.u.as_ref().unwrap(), &self.n))
-        .modpow(self.b_private.as_ref().unwrap(), &self.n);
-        let k = sha1(&s.to_bytes_be());
+            * self
+                .v
+                .clone()
+                .pow_mod(self.u.as_ref().unwrap(), &self.n)
+                .unwrap())
+        .pow_mod(self.b_private.as_ref().unwrap(), &self.n)
+        .unwrap();
+        let k = sha1(&s.to_digits(rug::integer::Order::Msf));
         sha1_hmac(&k, &vec![self.salt]) == k_in.to_owned()
     }
 }
@@ -68,12 +77,12 @@ impl Server {
 pub struct Client {
     password: Vec<u8>,
     salt: Option<u8>,
-    n: BigUint,
-    g: BigUint,
-    k: BigUint,
-    a_private: Option<BigUint>,
-    b_public: Option<BigUint>,
-    u: Option<BigUint>,
+    n: Integer,
+    g: Integer,
+    k: Integer,
+    a_private: Option<Integer>,
+    b_public: Option<Integer>,
+    u: Option<Integer>,
 }
 
 impl Client {
@@ -83,24 +92,28 @@ impl Client {
             salt: None,
             n: get_nist_p(),
             g: get_nist_g(),
-            k: BigUint::from(3u8),
+            k: Integer::from(3),
             a_private: None,
             b_public: None,
             u: None,
         }
     }
 
-    pub fn send_first_client_message(&mut self) -> BigUint {
+    pub fn send_first_client_message(&mut self) -> Integer {
         let (a_public, a_private) = generate_dh_key(&self.n, &self.g);
         self.a_private = Some(a_private);
         a_public
     }
 
-    pub fn compute_u(&mut self, b: &BigUint, salt: u8) {
-        let a = self.g.modpow(self.a_private.as_ref().unwrap(), &self.n);
-        let mut hash_input = a.to_bytes_be();
-        hash_input.append(&mut b.to_bytes_be());
-        self.u = Some(BigUint::from_bytes_be(&hash_input));
+    pub fn compute_u(&mut self, b: &Integer, salt: u8) {
+        let a = self
+            .g
+            .clone()
+            .pow_mod(self.a_private.as_ref().unwrap(), &self.n)
+            .unwrap();
+        let mut hash_input = a.to_digits::<u8>(rug::integer::Order::Msf);
+        hash_input.append(&mut b.to_digits(rug::integer::Order::Msf));
+        self.u = Some(Integer::from_digits(&hash_input, rug::integer::Order::Msf));
         self.salt = Some(salt);
         self.b_public = Some(b.to_owned());
     }
@@ -109,21 +122,23 @@ impl Client {
         let mut concat = vec![self.salt.unwrap()];
         concat.append(&mut self.password.to_owned());
         let x_h = sha1(&concat);
-        let x = BigUint::from_bytes_be(&x_h);
+        let x = Integer::from_digits(&x_h, rug::integer::Order::Msf);
         let base = self.b_public.as_ref().unwrap() + self.n.clone() * 3u8
-            - self.k.clone() * self.g.modpow(&x, &self.n);
-        let s = base.modpow(
-            &(self.a_private.as_ref().unwrap() + self.u.as_ref().unwrap() * x),
-            &self.n,
-        );
-        let k = sha1(&s.to_bytes_be());
+            - self.k.clone() * self.g.clone().pow_mod(&x, &self.n).unwrap();
+        let s = base
+            .pow_mod(
+                &(self.a_private.as_ref().unwrap() + self.u.as_ref().unwrap() * x),
+                &self.n,
+            )
+            .unwrap();
+        let k = sha1(&s.to_digits(rug::integer::Order::Msf));
         sha1_hmac(&k, &vec![self.salt.unwrap()])
     }
 }
 
 pub struct ClientMitm {
     salt: Option<u8>,
-    n: BigUint,
+    n: Integer,
 }
 
 impl ClientMitm {
@@ -134,11 +149,11 @@ impl ClientMitm {
         }
     }
 
-    pub fn send_first_client_message_zero(&self) -> BigUint {
-        BigUint::from(0u8)
+    pub fn send_first_client_message_zero(&self) -> Integer {
+        Integer::from(0)
     }
 
-    pub fn send_first_client_message_n(&self) -> BigUint {
+    pub fn send_first_client_message_n(&self) -> Integer {
         self.n.clone()
     }
 
@@ -147,8 +162,8 @@ impl ClientMitm {
     }
 
     pub fn send_login_message(&self) -> [u8; 20] {
-        let s = BigUint::from(0u8);
-        let k = sha1(&s.to_bytes_be());
+        let s = Integer::from(0);
+        let k = sha1(&s.to_digits(rug::integer::Order::Msf));
         sha1_hmac(&k, &vec![self.salt.unwrap()])
     }
 }
