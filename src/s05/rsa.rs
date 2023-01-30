@@ -3,8 +3,8 @@ use rug::Integer;
 use crate::util::generators::generate_prime;
 
 pub struct RsaPublic {
-    e: Integer,
-    n: Integer,
+    pub e: Integer,
+    pub n: Integer,
 }
 
 impl RsaPublic {
