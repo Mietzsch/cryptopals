@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn s06e01() {
-        let strength = 512;
+        let strength = 2048;
 
         let mut oracle = Oracle::new(strength);
 

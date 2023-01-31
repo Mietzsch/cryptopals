@@ -31,8 +31,8 @@ pub fn rsa_keygen(bits: usize) -> (RsaPublic, RsaPrivate) {
     let e = Integer::from(3);
 
     while !is_coprime {
-        let p = generate_prime(bits);
-        let q = generate_prime(bits);
+        let p = generate_prime(bits / 2);
+        let q = generate_prime(bits / 2);
 
         n = Integer::from(&p * &q);
         let et = (p - 1) * (q - 1);
@@ -54,7 +54,7 @@ mod tests {
     fn rsa() {
         let m = Integer::from(42);
 
-        let (rsa_public, rsa_private) = rsa_keygen(16);
+        let (rsa_public, rsa_private) = rsa_keygen(512);
 
         let c = rsa_public.encrypt(&m);
 
@@ -66,7 +66,7 @@ mod tests {
     #[test]
     fn rsa_broadcast() {
         let m = Integer::from(42);
-        let strength = 1024;
+        let strength = 2048;
 
         let (rsa_public_0, _rsa_private_0) = rsa_keygen(strength);
         let (rsa_public_1, _rsa_private_1) = rsa_keygen(strength);
