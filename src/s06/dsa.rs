@@ -1,6 +1,9 @@
+use indicatif::ProgressIterator;
 use rug::Integer;
 
-use crate::util::{generators::generate_random_range, to_integer::to_integer};
+use crate::util::{
+    generators::generate_random_range, integer::to_integer, progress_bar::create_progress_bar,
+};
 
 #[derive(Clone)]
 pub struct DsaParameters {
@@ -30,7 +33,7 @@ pub struct DsaPublic {
 }
 
 impl DsaPublic {
-    pub fn verify(&self, message: &[u8], signature: Signature) -> bool {
+    pub fn verify(&self, message: &[u8], signature: &Signature) -> bool {
         let h_m = to_integer(message);
 
         let r = &signature.r;
@@ -132,8 +135,26 @@ pub fn is_private_key_for(x: &Integer, pubkey: &DsaPublic) -> bool {
     }
 }
 
+pub fn small_k_attack(
+    parameters: &DsaParameters,
+    message: &[u8],
+    signature: &Signature,
+    pubkey: &DsaPublic,
+    max: usize,
+) -> Option<Integer> {
+    for i in (0..max).progress_with(create_progress_bar(max as u64)) {
+        let x = known_k_attack(parameters, message, signature, &Integer::from(i));
+        if is_private_key_for(&x, pubkey) {
+            return Some(x);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
+
+    use crate::{s04::sha1::sha1, util::integer::to_hash};
 
     use super::*;
 
@@ -155,7 +176,7 @@ mod tests {
 
         let signature = dsa_private.sign(message.as_bytes());
 
-        assert!(dsa_public.verify(message.as_bytes(), signature));
+        assert!(dsa_public.verify(message.as_bytes(), &signature));
     }
 
     #[test]
@@ -173,5 +194,46 @@ mod tests {
         let x_try = known_k_attack(&parameters, message.as_bytes(), &signature, &k);
 
         assert!(x_try == dsa_private.x);
+    }
+
+    #[test]
+    fn s06e03() {
+        let parameters = DsaParameters::default_parameters();
+        let y = rug::Integer::from_str_radix(
+            "84ad4719d044495496a3201c8ff484feb45b962e7302e56a392aee4
+        abab3e4bdebf2955b4736012f21a08084056b19bcd7fee56048e004
+        e44984e2f411788efdc837a0d2e5abb7b555039fd243ac01f0fb2ed
+        1dec568280ce678e931868d23eb095fde9d3779191b8c0299d6e07b
+        bb283e6633451e535c45513b2d33c99ea17",
+            16,
+        )
+        .unwrap();
+        let pk = DsaPublic {
+            y,
+            parameters: parameters.clone(),
+        };
+
+        let message = "For those that envy a MC it can be hazardous to your health\nSo be friendly, a matter of life and death, just like a etch-a-sketch\n";
+        let hash = sha1(message.as_bytes());
+        let hash_expect =
+            hex::decode("d2d0714f014a9784047eaeccf956520045c45265").expect("decoding failed");
+        assert_eq!(&hash[..], hash_expect);
+
+        let r =
+            rug::Integer::from_str_radix("548099063082341131477253921760299949438196259240", 10)
+                .unwrap();
+        let s =
+            rug::Integer::from_str_radix("857042759984254168557880549501802188789837994940", 10)
+                .unwrap();
+        let signature = Signature { r, s };
+        assert!(pk.verify(message.as_bytes(), &signature));
+
+        let max_k = 1 << 16;
+        let x = small_k_attack(&parameters, message.as_bytes(), &signature, &pk, max_k).unwrap();
+
+        let x_hash = to_hash(&x);
+        let x_hash_expect =
+            hex::decode("0954edd5e0afe5542a4adf012611a91912a3ec16").expect("decoding failed");
+        assert_eq!(&x_hash[..], x_hash_expect);
     }
 }
