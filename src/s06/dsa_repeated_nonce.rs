@@ -1,5 +1,5 @@
-use super::dsa::Signature;
-use crate::s06::dsa::DsaPublic;
+use super::dsa::{DsaParameters, Signature};
+use crate::{s06::dsa::DsaPublic, util::integer::to_integer};
 
 pub struct MessageAndSignature {
     pub message: String,
@@ -57,9 +57,27 @@ pub fn find_duplicates(
     None
 }
 
+pub fn find_k(
+    msg1: &MessageAndSignature,
+    msg2: &MessageAndSignature,
+    parameters: &DsaParameters,
+) -> rug::Integer {
+    let m1 = to_integer(msg1.message.as_bytes());
+    let m2 = to_integer(msg2.message.as_bytes());
+    let s1 = &msg1.signature.s;
+    let s2 = &msg2.signature.s;
+    let q = &parameters.q;
+
+    let numerator = (m1 - m2) % q;
+    let denominator = rug::Integer::from(s1 - s2) % q;
+    let inverse_denom = denominator.invert(q).unwrap();
+
+    (numerator * inverse_denom) % q
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::s06::dsa::DsaParameters;
+    use crate::s06::dsa::{is_private_key_for, known_k_attack, DsaParameters};
 
     use super::*;
 
@@ -81,13 +99,30 @@ mod tests {
             16,
         )
         .unwrap();
-        let pk = DsaPublic { y, parameters };
+        let pk = DsaPublic {
+            y,
+            parameters: parameters.clone(),
+        };
 
         let mut ms = create_signature_vector(&testdata);
 
         assert!(check_signatures(&ms, &pk));
 
-        let duplicate_result = find_duplicates(&mut ms);
-        assert!(duplicate_result.is_some());
+        let duplicate_result = find_duplicates(&mut ms).unwrap();
+        let k = find_k(duplicate_result.0, duplicate_result.1, &parameters);
+
+        let x_try = known_k_attack(
+            &parameters,
+            duplicate_result.0.message.as_bytes(),
+            &duplicate_result.0.signature,
+            &k,
+        );
+
+        assert!(is_private_key_for(&x_try, &pk));
+
+        // let x_hash = to_hash(&x_try);
+        // let x_hash_expect =
+        //     hex::decode("ca8f6f7c66fa362d40760d135b763eb8527d3d52").expect("decoding failed");
+        // assert_eq!(&x_hash[..], x_hash_expect);
     }
 }
