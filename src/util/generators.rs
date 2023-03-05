@@ -15,7 +15,8 @@ pub fn generate_random_bigint(bits: usize) -> Integer {
     let mut random_vec = vec![0u8; bytes_needed];
     rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut random_vec);
     let mut result = Integer::from_digits(&random_vec, rug::integer::Order::Lsf);
-    for index in (bytes_needed - 1) * 8 + remaining_bits..bytes_needed * 8 {
+
+    for index in bits..bytes_needed * 8 {
         result.set_bit(index.try_into().unwrap(), false);
     }
     result
@@ -23,7 +24,8 @@ pub fn generate_random_bigint(bits: usize) -> Integer {
 
 pub fn generate_prime(bits: usize) -> Integer {
     loop {
-        let candidate = generate_random_bigint(bits);
+        let mut candidate = generate_random_bigint(bits);
+        candidate.set_bit((bits - 1).try_into().unwrap(), true);
         if candidate.is_probably_prime(30) != rug::integer::IsPrime::No {
             return candidate;
         }
